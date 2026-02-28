@@ -1,9 +1,12 @@
 import express, { type Express, type Request, type Response } from "express";
-import { healthRouter } from "./routes/health";
-
+import swaggerUi from "swagger-ui-express";
+import { env } from "./config/env";
+import { getOpenApiSpec } from "./config/openapi";
+import router from "./routes";
 
 export function createApp(): Express {
   const app = express();
+  const openApiSpec = getOpenApiSpec(env.BASE_URL);
 
   app.use((_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,15 +17,18 @@ export function createApp(): Express {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
+  app.get("/api-docs.json", (_req: Request, res: Response) => {
+    res.json(openApiSpec);
+  });
 
-  app.use("/health", healthRouter);
-
+  app.use(router);
 
   app.get("/", (_req: Request, res: Response) => {
     res.json({
       name: "BazarCo API",
       version: "1.0.0",
-      docs: "/health",
+      docs: "/api-docs",
     });
   });
 

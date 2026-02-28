@@ -8,6 +8,8 @@ const BASE_URL = process.env.BASE_URL ?? `http://localhost:${Number(process.env.
 const MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017/bazarco";
 const CLUSTER_MONGO_ENABLED = process.env.CLUSTER_MONGO_ENABLED === "true" || process.env.CLUSTER_MONGO_ENABLED === "1";
 const CLUSTER_MONGO_URI = process.env.CLUSTER_MONGO_URI ?? "";
+const APP_MAIL = process.env.APP_MAIL ?? "";
+const APP_PW = process.env.APP_PW ?? "";
 
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
@@ -16,6 +18,8 @@ export const env = {
   MONGO_URI,
   CLUSTER_MONGO_ENABLED,
   CLUSTER_MONGO_URI,
+  APP_MAIL,
+  APP_PW,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;
