@@ -10,7 +10,9 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "engines": {
     "node": ">=18"
@@ -19,7 +21,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.21.0"
+    "express": "^4.21.0",
+    "mongoose": "^8.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

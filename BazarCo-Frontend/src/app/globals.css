@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --brand-red: #dc2626;
+  --brand-blue: #2563eb;
+  --brand-white: #fafafa;
+  --brand-black: #0a0a0a;
+  --gradient-red: #dc2626;
+  --gradient-blue: #2563eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-red: var(--brand-red);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-white: var(--brand-white);
+  --color-brand-black: var(--brand-black);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@keyframes gradient-shift {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(2%, -2%) scale(1.02); }
+  66% { transform: translate(-1%, 1%) scale(0.98); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 0.2; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, var(--gradient-red) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, var(--gradient-blue) 0%, transparent 50%),
+    var(--brand-black);
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
