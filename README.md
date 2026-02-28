@@ -31,7 +31,7 @@ npm run dev
 
 Set `NEXT_PUBLIC_API_URL` in the frontend `.env.local` to the backend URL (e.g. `http://localhost:3000`).
 
-## Deploy on Render (monorepo)
+## Deployment (monorepo)
 
 Create two services and set **Root Directory** so each service uses its own folder and only deploys when that folder changes.
 
