@@ -40,6 +40,9 @@ Create two services and set **Root Directory** so each service uses its own fold
 | Backend  | `BazarCo-Backend`  | `npm ci && npm run build` | `npm run start` |
 | Frontend | `BazarCo-Frontend` | `npm ci && npm run build` | `npm run start` |
 
+**Backend: run TypeScript directly (no build)**  
+Use **Build Command** `npm ci` and **Start Command** `npm run start:ts`. This runs `tsx src/server.ts` so you skip the `tsc` step and avoid type-definition issues on Render. `tsx` is in dependencies so it installs in production.
+
 - **Backend:** Add env vars (e.g. `PORT`, `BASE_URL`, `MONGO_URI_ATLAS`, `CLUSTER_MONGO_ENABLED`). Render sets `PORT` automatically.
 - **Frontend:** Set `NEXT_PUBLIC_API_URL` to your backend URL (e.g. `https://your-backend.onrender.com`).
 
