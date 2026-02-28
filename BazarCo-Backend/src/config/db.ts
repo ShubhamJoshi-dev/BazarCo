@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
 import { env } from "./env";
+import { DATABASE_CLUSTER_MONGO_ENABLED } from "../constant/database.constant";
 
-function getMongoUri(): string {
-  const useAtlas = env.CLUSTER_MONGO_ENABLED;
+function getMongoUri(): any {
+  const useAtlas = DATABASE_CLUSTER_MONGO_ENABLED || env.CLUSTER_MONGO_ENABLED;
   if (useAtlas) {
-    if (!env.CLUSTER_MONGO_URI) {
-      throw new Error("MONGO_URI_ATLAS is required when CLUSTER_MONGO_ENABLED is true");
-    }
     return env.CLUSTER_MONGO_URI;
   }
   return env.MONGO_URI;
