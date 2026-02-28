@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { env } from "./env";
 import { DATABASE_CLUSTER_MONGO_ENABLED } from "../constant/database.constant";
 
-function getMongoUri(): any {
+function getMongoUri(): string {
   const useAtlas = DATABASE_CLUSTER_MONGO_ENABLED || env.CLUSTER_MONGO_ENABLED;
   if (useAtlas) {
     return env.CLUSTER_MONGO_URI;

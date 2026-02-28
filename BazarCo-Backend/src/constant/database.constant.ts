@@ -1,1 +1,1 @@
-export const DATABASE_CONSTANT = true
+export const DATABASE_CLUSTER_MONGO_ENABLED = true;
