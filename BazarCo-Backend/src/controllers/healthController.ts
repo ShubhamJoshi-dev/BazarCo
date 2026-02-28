@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
-import type { HealthResponse } from "../interfaces/health.js";
-import { env } from "../config/env.js";
+import type { HealthResponse } from "../interfaces/health";
+import { env } from "../config/env";
 
 export function getHealth(_req: Request, res: Response): void {
   const dbState = mongoose.connection.readyState === 1 ? "connected" : "disconnected";

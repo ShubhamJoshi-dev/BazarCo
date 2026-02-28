@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { env } from "./env.js";
+import { env } from "./env";
 
 function getMongoUri(): string {
   const useAtlas = env.CLUSTER_MONGO_ENABLED || env.MONGO_URI_ATLAS.length > 0;

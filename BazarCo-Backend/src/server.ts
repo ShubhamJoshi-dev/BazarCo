@@ -1,8 +1,14 @@
-import { createApp } from "./app.js";
-import { connectDb } from "./config/db.js";
-import { env } from "./config/env.js";
+import path from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+
+import { createApp } from "./app";
+import { connectDb } from "./config/db";
+import { env } from "./config/env";
 
 const app = createApp();
+
 
 async function start(): Promise<void> {
   await connectDb();
