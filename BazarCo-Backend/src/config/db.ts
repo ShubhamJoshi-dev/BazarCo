@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { env } from "./env";
 
 function getMongoUri(): string {
+  console.log(process.env)
   const useAtlas = env.CLUSTER_MONGO_ENABLED || env.MONGO_URI_ATLAS.length > 0;
   if (useAtlas) {
     if (!env.MONGO_URI_ATLAS) {
