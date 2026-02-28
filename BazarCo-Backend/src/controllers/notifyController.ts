@@ -26,7 +26,7 @@ export async function postNotify(req: Request, res: Response): Promise<void> {
       successResponse(res, 200, "Already notified");
       return;
     }
-    successResponse(res, 200, "Notification signup successful");
+    successResponse(res, 200, "User Notified Successfully");
   } catch (err: unknown) {
     const isDuplicate = err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000;
     if (isDuplicate) {
