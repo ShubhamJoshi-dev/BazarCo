@@ -10,7 +10,7 @@ export function ComingSoonHero() {
       <div className="absolute inset-0 bg-[var(--brand-black)]/30" />
 
       <motion.div
-        className="hero-card relative z-10 flex flex-col items-center gap-8 rounded-2xl px-8 py-12 text-center backdrop-blur-sm sm:px-12 sm:py-14"
+        className="hero-card relative z-10 flex flex-col items-center gap-8 rounded-2xl px-8 py-12 text-center sm:px-12 sm:py-14 border-0 outline-none shadow-none"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
