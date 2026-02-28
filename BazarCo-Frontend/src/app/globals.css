@@ -3,12 +3,12 @@
 :root {
   --background: #0a0a0a;
   --foreground: #fafafa;
-  --brand-red: #dc2626;
-  --brand-blue: #2563eb;
+  --brand-red: #e57373;
+  --brand-blue: #64b5f6;
   --brand-white: #fafafa;
   --brand-black: #0a0a0a;
-  --gradient-red: #dc2626;
-  --gradient-blue: #2563eb;
+  --gradient-red: #b91c1c;
+  --gradient-blue: #1d4ed8;
 }
 
 @theme inline {
@@ -41,10 +41,16 @@
 
 .hero-gradient {
   background:
-    radial-gradient(ellipse 80% 50% at 20% 40%, var(--gradient-red) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, var(--gradient-blue) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 60% at 25% 35%, var(--gradient-red) 0%, transparent 45%),
+    radial-gradient(ellipse 85% 55% at 75% 65%, var(--gradient-blue) 0%, transparent 45%),
     var(--brand-black);
-  animation: gradient-shift 8s ease-in-out infinite;
+  animation: gradient-shift 10s ease-in-out infinite;
+}
+
+.hero-card {
+  border-left: 1px solid rgba(229, 115, 115, 0.35);
+  border-right: 1px solid rgba(100, 181, 246, 0.35);
+  background: rgba(10, 10, 10, 0.6);
 }
 
 body {
