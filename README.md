@@ -31,6 +31,18 @@ npm run dev
 
 Set `NEXT_PUBLIC_API_URL` in the frontend `.env.local` to the backend URL (e.g. `http://localhost:3000`).
 
+## Deploy on Render (monorepo)
+
+Create two services and set **Root Directory** so each service uses its own folder and only deploys when that folder changes.
+
+| Service  | Root Directory   | Build Command           | Start Command   |
+|----------|------------------|-------------------------|-----------------|
+| Backend  | `BazarCo-Backend`  | `npm ci && npm run build` | `npm run start` |
+| Frontend | `BazarCo-Frontend` | `npm ci && npm run build` | `npm run start` |
+
+- **Backend:** Add env vars (e.g. `PORT`, `BASE_URL`, `MONGO_URI_ATLAS`, `CLUSTER_MONGO_ENABLED`). Render sets `PORT` automatically.
+- **Frontend:** Set `NEXT_PUBLIC_API_URL` to your backend URL (e.g. `https://your-backend.onrender.com`).
+
 ## CI
 
 GitHub Actions runs on push and pull requests:
