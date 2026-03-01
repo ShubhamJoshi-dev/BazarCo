@@ -29,7 +29,7 @@ function corsOriginCallback(
 
 const corsOptions: cors.CorsOptions = {
   origin: corsOriginCallback,
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: false,
   optionsSuccessStatus: 204,
@@ -43,7 +43,7 @@ export function createApp(): Express {
   // Handle preflight first so it always returns 204 before any other middleware
   app.use((req: Request, res: Response, next: () => void) => {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.setHeader("Access-Control-Max-Age", "86400");
     if (req.method === "OPTIONS") {

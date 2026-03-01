@@ -1,5 +1,6 @@
 import { BackendHealthButton } from "@/components/BackendHealthButton";
 import { ComingSoonHero } from "@/components/ComingSoonHero";
+import { DevAccessButton } from "@/components/DevAccessButton";
 import { NotifyButton } from "@/components/NotifyButton";
 
 export default function Home() {
@@ -7,6 +8,7 @@ export default function Home() {
     <main className="min-h-screen bg-[var(--brand-black)]">
       <BackendHealthButton />
       <NotifyButton />
+      <DevAccessButton />
       <ComingSoonHero />
     </main>
   );
