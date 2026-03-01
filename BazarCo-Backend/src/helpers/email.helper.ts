@@ -16,12 +16,12 @@ export class EmailHelper {
   private getTransporter(): Transporter {
     if (!this.transporter) {
       if (!env.APP_MAIL || !env.APP_PW) {
-        throw new Error("APP_ID and APP_PW must be set to send email");
+        throw new Error("APP_MAIL and APP_PW must be set to send email");
       }
       this.transporter = nodemailer.createTransport({
         service: "gmail",
         host: "smtp.gmail.com",
-        port: 456,
+        port: 465,
         secure: true,
         auth: {
           user: env.APP_MAIL,

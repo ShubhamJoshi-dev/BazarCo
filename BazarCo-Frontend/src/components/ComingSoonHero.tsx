@@ -30,14 +30,57 @@ export function ComingSoonHero() {
             className="h-auto w-64 sm:w-72 md:w-80"
           />
         </motion.div>
+
+        {/* Loading animation - gradient bar + dots */}
+        <motion.div
+          className="flex flex-col items-center gap-3"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.5, ease: "easeOut" }}
+        >
+          <div className="relative h-1 w-24 overflow-hidden rounded-full bg-neutral-800/80 sm:w-28">
+            <div className="loading-shimmer-bar absolute inset-0 rounded-full opacity-90" />
+          </div>
+          <div className="flex items-center justify-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <motion.span
+                key={i}
+                className="h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2"
+                style={{
+                  backgroundColor: i === 1 ? "var(--brand-blue)" : "var(--brand-red)",
+                }}
+                animate={{
+                  scale: [0.9, 1.2, 0.9],
+                  opacity: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: i * 0.2,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </div>
+        </motion.div>
+
         <motion.h1
           className="text-3xl font-bold tracking-tight text-[var(--brand-white)] sm:text-4xl md:text-5xl"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5, ease: "easeOut" }}
+          transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
         >
           Coming Soon
         </motion.h1>
+        <motion.p
+          className="text-base font-medium tracking-wide text-neutral-400 sm:text-lg"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65, duration: 0.5, ease: "easeOut" }}
+        >
+          Product launches{" "}
+          <span className="font-semibold text-[var(--brand-blue)]">August 20, 2026</span>
+        </motion.p>
       </motion.div>
 
       <motion.div
