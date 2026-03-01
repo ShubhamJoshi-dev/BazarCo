@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, User, Package } from "lucide-react";
+import { LayoutDashboard, User, Package, BarChart3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function SellerDashboardLayout({
@@ -23,6 +23,7 @@ export function SellerDashboardLayout({
 
   const nav = [
     { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+    { href: "/dashboard/report", label: "Report", Icon: BarChart3 },
     { href: "/dashboard/products", label: "Products", Icon: Package },
     { href: "/dashboard/profile", label: "Profile", Icon: User },
   ];

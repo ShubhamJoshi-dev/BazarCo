@@ -1,0 +1,138 @@
+import type { Request, Response } from "express";
+import { errorResponse, successResponse } from "../helpers/response.helper";
+import * as orderRepo from "../repositories/order.repository";
+import * as productRepo from "../repositories/product.repository";
+
+type ReqWithUser = Request & { user?: { id: string } };
+
+export async function listOrders(req: ReqWithUser, res: Response): Promise<void> {
+  const user = req.user;
+  if (!user) {
+    errorResponse(res, 401, "Authentication required");
+    return;
+  }
+  const asSeller = req.query.as === "seller";
+  const status = typeof req.query.status === "string" && ["pending", "in_progress", "completed", "cancelled"].includes(req.query.status)
+    ? req.query.status
+    : undefined;
+
+  const docs = asSeller
+    ? await orderRepo.findBySellerId(user.id, status ? { status } : undefined)
+    : await orderRepo.findByBuyerId(user.id, status ? { status } : undefined);
+
+  const orders = docs.map((d) => {
+    const doc = d as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date };
+    return {
+      id: doc._id.toString(),
+      buyerId: doc.buyerId?.toString?.() ?? doc.buyerId,
+      sellerId: doc.sellerId?.toString?.() ?? doc.sellerId,
+      items: doc.items ?? [],
+      total: doc.total,
+      status: doc.status,
+      createdAt: doc.createdAt?.toISOString?.(),
+    };
+  });
+
+  successResponse(res, 200, "Orders listed", { orders });
+}
+
+export async function createOrder(req: ReqWithUser, res: Response): Promise<void> {
+  const user = req.user;
+  if (!user) {
+    errorResponse(res, 401, "Authentication required");
+    return;
+  }
+
+  const body = req.body as { sellerId?: string; items?: Array<{ productId: string; quantity: number }> };
+  const sellerId = typeof body.sellerId === "string" ? body.sellerId.trim() : undefined;
+  const itemsRaw = Array.isArray(body.items) ? body.items : undefined;
+
+  if (!sellerId || !itemsRaw?.length) {
+    errorResponse(res, 400, "sellerId and items (productId, quantity) are required");
+    return;
+  }
+
+  let total = 0;
+  const items: Array<{ productId: string; productName: string; quantity: number; price: number }> = [];
+
+  for (const row of itemsRaw) {
+    const productId = typeof row.productId === "string" ? row.productId.trim() : undefined;
+    const quantity = typeof row.quantity === "number" ? Math.max(1, Math.floor(row.quantity)) : 1;
+    if (!productId) continue;
+    const product = await productRepo.findById(productId);
+    if (!product) {
+      errorResponse(res, 400, `Product not found: ${productId}`);
+      return;
+    }
+    const doc = product as Record<string, unknown> & { sellerId: { toString(): string }; name: string; price: number };
+    if (doc.sellerId?.toString() !== sellerId) {
+      errorResponse(res, 400, "Product does not belong to this seller");
+      return;
+    }
+    const price = Number(doc.price) ?? 0;
+    total += price * quantity;
+    items.push({ productId, productName: doc.name, quantity, price });
+  }
+
+  if (items.length === 0) {
+    errorResponse(res, 400, "No valid items");
+    return;
+  }
+
+  const order = await orderRepo.createOrder({
+    buyerId: user.id,
+    sellerId,
+    items,
+    total,
+  });
+
+  const o = order as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date };
+  successResponse(res, 201, "Order created", {
+    order: {
+      id: o._id.toString(),
+      buyerId: o.buyerId?.toString?.() ?? o.buyerId,
+      sellerId: o.sellerId?.toString?.() ?? o.sellerId,
+      items: o.items,
+      total: o.total,
+      status: o.status,
+      createdAt: o.createdAt?.toISOString?.(),
+    },
+  });
+}
+
+export async function updateOrderStatus(req: ReqWithUser, res: Response): Promise<void> {
+  const user = req.user;
+  if (!user) {
+    errorResponse(res, 401, "Authentication required");
+    return;
+  }
+
+  const orderId = req.params.id;
+  const status = typeof req.body.status === "string" && ["pending", "in_progress", "completed", "cancelled"].includes(req.body.status)
+    ? req.body.status
+    : undefined;
+
+  if (!status) {
+    errorResponse(res, 400, "Valid status required: pending, in_progress, completed, cancelled");
+    return;
+  }
+
+  const updated = await orderRepo.updateStatus(orderId, user.id, status);
+  if (!updated) {
+    errorResponse(res, 404, "Order not found");
+    return;
+  }
+
+  const doc = updated as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date };
+  successResponse(res, 200, "Order updated", {
+    order: {
+      id: doc._id.toString(),
+      buyerId: doc.buyerId?.toString?.() ?? doc.buyerId,
+      sellerId: doc.sellerId?.toString?.() ?? doc.sellerId,
+      items: doc.items,
+      total: doc.total,
+      status: doc.status,
+      createdAt: doc.createdAt?.toISOString?.(),
+    },
+  });
+}

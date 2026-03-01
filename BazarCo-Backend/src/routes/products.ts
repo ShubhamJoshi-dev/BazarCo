@@ -9,13 +9,19 @@ import {
   archiveProduct,
   unarchiveProduct,
   browseProducts,
+  getProductById,
 } from "../controllers/productController";
+import { addOrUpdateReview } from "../controllers/reviewController";
+import { toggleLike } from "../controllers/likeController";
 
 export const productsRouter = Router();
 
 productsRouter.use(requireAuth);
 productsRouter.get("/browse", browseProducts);
 productsRouter.get("/", listProducts);
+productsRouter.get("/:id", getProductById);
+productsRouter.post("/:id/reviews", addOrUpdateReview);
+productsRouter.post("/:id/like", toggleLike);
 productsRouter.post("/", (req, res, next) => {
   uploadSingleImage(req, res, (e) => {
     if (e) {

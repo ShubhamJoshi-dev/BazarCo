@@ -4,6 +4,9 @@ import { errorResponse, successResponse } from "../helpers/response.helper";
 import * as productRepo from "../repositories/product.repository";
 import * as categoryRepo from "../repositories/category.repository";
 import * as tagRepo from "../repositories/tag.repository";
+import * as reviewRepo from "../repositories/review.repository";
+import * as likeRepo from "../repositories/like.repository";
+import * as userRepo from "../repositories/user.repository";
 import { uploadImage, isCloudinaryConfigured } from "../services/cloudinary.service";
 import { createShopifyProduct, isShopifyConfigured } from "../services/shopify.service";
 import {
@@ -346,18 +349,21 @@ export async function browseProducts(req: ReqWithUser, res: Response): Promise<v
       page,
       hitsPerPage: limit,
     });
-    successResponse(res, 200, "Products found", {
-      products: hits.map(toBrowseProductDto),
-      categories: categoriesList,
-      tags: tagsList,
-      total: nbHits,
-      page: resPage,
-      nbPages,
-    });
-    return;
+    // If Algolia returns no hits, fallback to MongoDB so search still works (e.g. index not synced)
+    if (nbHits > 0) {
+      successResponse(res, 200, "Products found", {
+        products: hits.map(toBrowseProductDto),
+        categories: categoriesList,
+        tags: tagsList,
+        total: nbHits,
+        page: resPage,
+        nbPages,
+      });
+      return;
+    }
   }
 
-  // Default browse (no search) or Algolia not configured: show MongoDB data
+  // Default browse, Algolia not configured, or Algolia returned 0: show MongoDB data
   const { docs, total } = await productRepo.findActiveForBrowse({
     query: q || undefined,
     categoryId,
@@ -391,5 +397,69 @@ export async function browseProducts(req: ReqWithUser, res: Response): Promise<v
     total,
     page,
     nbPages,
+  });
+}
+
+export async function getProductById(req: ReqWithUser, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 401, "Authentication required");
+    return;
+  }
+  const id = req.params.id;
+  const product = await productRepo.findById(id);
+  if (!product) {
+    errorResponse(res, 404, "Product not found");
+    return;
+  }
+  const doc = product as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId; status: string };
+  if (doc.status !== "active") {
+    errorResponse(res, 404, "Product not found");
+    return;
+  }
+  let categoryName: string | undefined;
+  if (doc.categoryId) {
+    const cat = await categoryRepo.findCategoryById((doc.categoryId as Types.ObjectId).toString());
+    categoryName = cat?.name;
+  }
+  const tagNames: string[] = [];
+  if (Array.isArray(doc.tagIds)) {
+    for (const tid of doc.tagIds) {
+      const t = await tagRepo.findTagById((tid as Types.ObjectId).toString());
+      if (t) tagNames.push(t.name);
+    }
+  }
+  const productDto = toProductDto(doc, { category: categoryName, tags: tagNames });
+
+  const [reviewCount, likeCount, averageRating, userLiked, reviews] = await Promise.all([
+    reviewRepo.countByProduct(id),
+    likeRepo.countByProduct(id),
+    reviewRepo.getAverageRating(id),
+    likeRepo.isLikedByUser(id, req.user.id),
+    reviewRepo.findByProduct(id),
+  ]);
+
+  const reviewsWithUser = await Promise.all(
+    reviews.map(async (r) => {
+      const rev = r as Record<string, unknown> & { _id: Types.ObjectId; userId: Types.ObjectId; rating: number; comment?: string | null; createdAt: Date };
+      const u = await userRepo.findById(rev.userId.toString());
+      const name = (u as { name?: string } | null)?.name ?? (u as { email?: string })?.email ?? "User";
+      return {
+        id: rev._id.toString(),
+        userId: rev.userId.toString(),
+        userName: name,
+        rating: rev.rating,
+        comment: rev.comment ?? undefined,
+        createdAt: (rev.createdAt as Date).toISOString(),
+      };
+    })
+  );
+
+  successResponse(res, 200, "Product found", {
+    product: productDto,
+    reviewCount,
+    likeCount,
+    averageRating: averageRating ?? 0,
+    userLiked,
+    reviews: reviewsWithUser,
   });
 }

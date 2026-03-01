@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Package, ImageIcon, Filter, ChevronRight, Heart } from "lucide-react";
@@ -277,6 +278,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       whileHover={{ y: -4 }}
       className="group rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] transition-all duration-200"
     >
+      <Link href={`/dashboard/product/${product.id}`} className="block">
       <div className="aspect-square bg-white/5 relative overflow-hidden">
         {product.imageUrl ? (
           <Image
@@ -293,9 +295,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         )}
         <button
           type="button"
-          onClick={toggleFavourite}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(); }}
           disabled={loading}
-          className="absolute top-2 right-2 rounded-full bg-black/60 p-2 backdrop-blur-sm hover:bg-black/80 transition-colors disabled:opacity-60"
+          className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-2 backdrop-blur-sm hover:bg-black/80 transition-colors disabled:opacity-60"
           aria-label={favourited ? "Remove from favourites" : "Add to favourites"}
         >
           <Heart className={`w-5 h-5 ${favourited ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : "text-white"}`} />
@@ -328,6 +330,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
+      </Link>
     </motion.article>
   );
 }

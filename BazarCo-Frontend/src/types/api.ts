@@ -25,6 +25,8 @@ export interface AuthUser {
   email: string;
   name?: string;
   role: UserRole;
+  rating?: number;
+  ratingCount?: number;
 }
 
 export interface AuthSuccessResponse {
