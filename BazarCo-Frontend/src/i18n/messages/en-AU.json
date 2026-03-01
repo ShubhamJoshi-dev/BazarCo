@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "browse": "Browse",
+    "favourites": "Favourites",
+    "cart": "Cart",
+    "profile": "Profile",
+    "report": "Report",
+    "products": "Products",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "sellerAccount": "Seller account",
+    "logout": "Logout",
+    "sellerDashboard": "Seller Dashboard"
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome back",
+    "welcomeSeller": "Welcome to your seller space",
+    "subtitleBuyer": "Browse and buy from the marketplace. Your orders and profile are a click away.",
+    "subtitleSeller": "Manage your store and listings from here. Your seller dashboard is ready.",
+    "verifiedSellers": "Verified & secure sellers",
+    "verifiedSellersDesc": "Shop with confidence. Every seller on BazarCo is verified so you get a safe, trustworthy marketplace.",
+    "catalogManagement": "Catalog management",
+    "catalogDescSeller": "Organize products with categories and tags. Search, filter, and keep your catalog in shape.",
+    "catalogDescBuyer": "Browse by category and tags. Find what you need quickly with smart search and filters.",
+    "hotSales": "Hot sales",
+    "bestSelling": "Best selling",
+    "viewAll": "View all",
+    "noHotProducts": "No hot products yet. Check back soon.",
+    "noBestSellers": "No best sellers yet. Check back soon.",
+    "listings": "Listings",
+    "myOrders": "My orders",
+    "manageProducts": "Manage your products",
+    "browseAndBuy": "Browse and buy from the marketplace",
+    "profileSettings": "Profile & settings",
+    "profileSettingsDesc": "Update your name and view your account details",
+    "loading": "Loading..."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "products": "Products",
+    "addToCart": "Add to cart",
+    "viewCart": "View cart",
+    "continueShopping": "Continue shopping"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { User, ShoppingCart, Flame, TrendingUp, ImageIcon, ChevronRight, ShieldCheck, LayoutGrid } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +15,7 @@ const CARD_STAGGER = 0.04;
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const t = useTranslations("dashboard");
   const isSeller = user?.role === "seller";
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,7 +57,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.15, duration: 0.4 }}
               className="text-2xl font-bold text-[var(--brand-white)] mb-2"
             >
-              {isSeller ? "Welcome to your seller space" : "Welcome back"}
+              {isSeller ? t("welcomeSeller") : t("welcomeBack")}
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, x: -12 }}
@@ -63,9 +65,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.25, duration: 0.4 }}
               className="text-neutral-400 max-w-lg"
             >
-              {isSeller
-                ? "Manage your store and listings from here. Your seller dashboard is ready."
-                : "Browse and buy from the marketplace. Your orders and profile are a click away."}
+              {isSeller ? t("subtitleSeller") : t("subtitleBuyer")}
             </motion.p>
           </div>
           <motion.div
@@ -107,9 +107,9 @@ export default function DashboardPage() {
               <ShieldCheck className="h-6 w-6" strokeWidth={2} />
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--brand-white)] mb-1">Verified & secure sellers</h3>
+              <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("verifiedSellers")}</h3>
               <p className="text-sm text-neutral-400 leading-relaxed">
-                Shop with confidence. Every seller on BazarCo is verified so you get a safe, trustworthy marketplace.
+                {t("verifiedSellersDesc")}
               </p>
             </div>
           </div>
@@ -123,11 +123,9 @@ export default function DashboardPage() {
               <LayoutGrid className="h-6 w-6" strokeWidth={2} />
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--brand-white)] mb-1">Catalog management</h3>
+              <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("catalogManagement")}</h3>
               <p className="text-sm text-neutral-400 leading-relaxed">
-                {isSeller
-                  ? "Organize products with categories and tags. Search, filter, and keep your catalog in shape."
-                  : "Browse by category and tags. Find what you need quickly with smart search and filters."}
+                {isSeller ? t("catalogDescSeller") : t("catalogDescBuyer")}
               </p>
             </div>
           </div>
@@ -177,7 +175,7 @@ export default function DashboardPage() {
                 animate={{ opacity: 1 }}
                 className="text-sm text-neutral-500 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center"
               >
-                No hot products yet. Check back soon.
+                {t("noHotProducts")}
               </motion.p>
             )}
           </motion.section>
@@ -191,13 +189,13 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)]">
                 <TrendingUp className="w-5 h-5 text-[var(--brand-blue)]" />
-                Best selling
+                {t("bestSelling")}
               </h3>
               <Link
                 href="/dashboard/browse"
                 className="text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1"
               >
-                View all <ChevronRight className="w-4 h-4" />
+                {t("viewAll")} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             {loading ? (
@@ -223,7 +221,7 @@ export default function DashboardPage() {
                 animate={{ opacity: 1 }}
                 className="text-sm text-neutral-500 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center"
               >
-                No best sellers yet. Check back soon.
+                {t("noBestSellers")}
               </motion.p>
             )}
           </motion.section>
@@ -245,10 +243,10 @@ export default function DashboardPage() {
               <ShoppingCart className="w-7 h-7" strokeWidth={2} />
             </div>
             <p className="font-semibold text-[var(--brand-white)] mb-1">
-              {isSeller ? "Listings" : "My orders"}
+              {isSeller ? t("listings") : t("myOrders")}
             </p>
             <p className="text-sm text-neutral-400">
-              {isSeller ? "Manage your products" : "Browse and buy from the marketplace"}
+              {isSeller ? t("manageProducts") : t("browseAndBuy")}
             </p>
           </Link>
         </motion.div>
@@ -267,10 +265,10 @@ export default function DashboardPage() {
               <User className="w-7 h-7" strokeWidth={2} />
             </div>
             <p className="font-semibold text-[var(--brand-white)] mb-1">
-              Profile & settings
+              {t("profileSettings")}
             </p>
             <p className="text-sm text-neutral-400">
-              Update your name and view your account details
+              {t("profileSettingsDesc")}
             </p>
           </Link>
         </motion.div>

@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 export function BuyerDashboardLayout({
   children,
@@ -13,6 +16,7 @@ export function BuyerDashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const t = useTranslations("nav");
 
   function handleLogout() {
     logout();
@@ -36,7 +40,7 @@ export function BuyerDashboardLayout({
                   : "text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
-              Dashboard
+              {t("dashboard")}
             </Link>
             <Link
               href="/dashboard/browse"
@@ -46,7 +50,7 @@ export function BuyerDashboardLayout({
                   : "text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
-              Browse
+              {t("browse")}
             </Link>
             <Link
               href="/dashboard/favourites"
@@ -56,7 +60,7 @@ export function BuyerDashboardLayout({
                   : "text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
-              Favourites
+              {t("favourites")}
             </Link>
             <Link
               href="/dashboard/cart"
@@ -66,7 +70,7 @@ export function BuyerDashboardLayout({
                   : "text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
-              Cart
+              {t("cart")}
             </Link>
             <Link
               href="/dashboard/profile"
@@ -76,19 +80,23 @@ export function BuyerDashboardLayout({
                   : "text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
-              Profile
+              {t("profile")}
             </Link>
+            <div className="flex items-center gap-2">
+              <LocaleSwitcher />
+              <ThemeSwitcher />
+            </div>
             <span className="text-sm text-neutral-600">|</span>
             <span className="text-sm text-[var(--brand-white)]">{user?.name || user?.email}</span>
             <span className="rounded-full bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border border-[var(--brand-blue)]/40 px-2.5 py-0.5 text-xs font-medium">
-              Buyer
+              {t("buyer")}
             </span>
             <button
               type="button"
               onClick={handleLogout}
               className="text-sm text-neutral-400 hover:text-[var(--brand-red)] transition-colors"
             >
-              Logout
+              {t("logout")}
             </button>
           </nav>
         </div>
