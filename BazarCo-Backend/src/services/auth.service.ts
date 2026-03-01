@@ -18,10 +18,12 @@ export async function signup(email: string, password: string, name?: string) {
   const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
   const token = signToken(payload);
   const role = (user as { role?: string }).role ?? "buyer";
+  const rating = (user as { rating?: number }).rating ?? 0;
+  const ratingCount = (user as { ratingCount?: number }).ratingCount ?? 0;
   return {
     success: true,
     token,
-    user: { id: user._id.toString(), email: user.email, name: user.name, role },
+    user: { id: user._id.toString(), email: user.email, name: user.name, role, rating, ratingCount },
   };
 }
 
@@ -37,10 +39,12 @@ export async function login(email: string, password: string) {
   const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
   const token = signToken(payload);
   const role = (user as { role?: string }).role ?? "buyer";
+  const rating = (user as { rating?: number }).rating ?? 0;
+  const ratingCount = (user as { ratingCount?: number }).ratingCount ?? 0;
   return {
     success: true,
     token,
-    user: { id: user._id.toString(), email: user.email, name: user.name, role },
+    user: { id: user._id.toString(), email: user.email, name: user.name, role, rating, ratingCount },
   };
 }
 
@@ -71,24 +75,34 @@ export async function resetPassword(token: string, newPassword: string) {
 export async function getProfile(userId: string) {
   const user = await userRepo.findById(userId);
   if (!user) return null;
-  const role = (user as { role?: string }).role ?? "buyer";
+  const u = user as { _id: { toString(): string }; email: string; name?: string; role?: string; rating?: number; ratingCount?: number };
+  const role = u.role ?? "buyer";
+  const rating = u.rating ?? 0;
+  const ratingCount = u.ratingCount ?? 0;
   return {
-    id: user._id.toString(),
-    email: user.email,
-    name: user.name,
+    id: u._id.toString(),
+    email: u.email,
+    name: u.name,
     role,
+    rating,
+    ratingCount,
   };
 }
 
 export async function updateProfile(userId: string, name: string) {
   const updated = await userRepo.updateUserName(userId, name);
   if (!updated) return null;
-  const role = (updated as { role?: string }).role ?? "buyer";
+  const u = updated as { _id: { toString(): string }; email: string; name?: string; role?: string; rating?: number; ratingCount?: number };
+  const role = u.role ?? "buyer";
+  const rating = u.rating ?? 0;
+  const ratingCount = u.ratingCount ?? 0;
   return {
-    id: updated._id.toString(),
-    email: updated.email,
-    name: updated.name,
+    id: u._id.toString(),
+    email: u.email,
+    name: u.name,
     role,
+    rating,
+    ratingCount,
   };
 }
 
@@ -105,9 +119,11 @@ export async function devLogin(secret: string) {
   const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
   const token = signToken(payload);
   const role = (user as { role?: string }).role ?? "buyer";
+  const rating = (user as { rating?: number }).rating ?? 0;
+  const ratingCount = (user as { ratingCount?: number }).ratingCount ?? 0;
   return {
     success: true,
     token,
-    user: { id: user._id.toString(), email: user.email, name: user.name, role },
+    user: { id: user._id.toString(), email: user.email, name: user.name, role, rating, ratingCount },
   };
 }

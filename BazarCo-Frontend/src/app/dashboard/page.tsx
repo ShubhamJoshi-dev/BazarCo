@@ -317,7 +317,7 @@ function DashboardProductCard({
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
       <Link
-        href="/dashboard/browse"
+        href={`/dashboard/product/${product.id}`}
         className="group block rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] transition-all duration-200"
       >
         <div className="aspect-square bg-white/5 relative overflow-hidden">

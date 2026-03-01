@@ -90,10 +90,16 @@ export default function FavouritesPage() {
                 <h3 className="font-semibold text-[var(--brand-white)] truncate">{p.name}</h3>
                 <div className="mt-2 flex gap-2">
                   <Link
-                    href="/dashboard/browse"
+                    href={`/dashboard/product/${p.id}`}
                     className="text-sm text-[var(--brand-blue)] hover:underline"
                   >
-                    View in browse
+                    View product
+                  </Link>
+                  <Link
+                    href="/dashboard/browse"
+                    className="text-sm text-neutral-400 hover:underline"
+                  >
+                    Browse all
                   </Link>
                 </div>
               </div>

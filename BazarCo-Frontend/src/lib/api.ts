@@ -406,3 +406,192 @@ export async function productUnarchive(id: string): Promise<Product | null> {
     return null;
   }
 }
+
+// Product detail (buyer): get by id with reviews, like count, etc.
+export interface ProductReview {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface ProductDetailResponse {
+  product: Product;
+  reviewCount: number;
+  likeCount: number;
+  averageRating: number;
+  userLiked: boolean;
+  reviews: ProductReview[];
+}
+
+export async function getProductById(id: string): Promise<ProductDetailResponse | null> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      product: Product;
+      reviewCount: number;
+      likeCount: number;
+      averageRating: number;
+      userLiked: boolean;
+      reviews: ProductReview[];
+    }>(`/products/${id}`);
+    if (data.status === "success") {
+      return {
+        product: data.product,
+        reviewCount: data.reviewCount ?? 0,
+        likeCount: data.likeCount ?? 0,
+        averageRating: data.averageRating ?? 0,
+        userLiked: data.userLiked ?? false,
+        reviews: data.reviews ?? [],
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function addProductReview(productId: string, rating: number, comment?: string): Promise<{ success: boolean }> {
+  try {
+    const { data } = await api.post<{ status: string }>(`/products/${productId}/reviews`, { rating, comment });
+    return { success: data.status === "success" };
+  } catch {
+    return { success: false };
+  }
+}
+
+export async function toggleProductLike(productId: string): Promise<{ liked: boolean; likeCount: number } | null> {
+  try {
+    const { data } = await api.post<{ status: string; liked: boolean; likeCount: number }>(`/products/${productId}/like`);
+    if (data.status === "success") return { liked: data.liked, likeCount: data.likeCount ?? 0 };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Cart
+export interface CartItem {
+  productId: string;
+  quantity: number;
+  name: string;
+  price: number;
+  imageUrl?: string;
+  subtotal: number;
+}
+
+export async function getCart(): Promise<{ items: CartItem[]; total: number }> {
+  try {
+    const { data } = await api.get<{ status: string; items: CartItem[]; total: number }>("/cart");
+    if (data.status === "success") return { items: data.items ?? [], total: data.total ?? 0 };
+    return { items: [], total: 0 };
+  } catch {
+    return { items: [], total: 0 };
+  }
+}
+
+export async function addToCart(productId: string, quantity = 1): Promise<{ success: boolean; productName?: string }> {
+  try {
+    const { data } = await api.post<{ status: string; productName?: string }>("/cart", { productId, quantity });
+    if (data.status === "success") return { success: true, productName: data.productName };
+    return { success: false };
+  } catch {
+    return { success: false };
+  }
+}
+
+export async function updateCartItemQuantity(productId: string, quantity: number): Promise<boolean> {
+  try {
+    const { data } = await api.patch<{ status: string }>(`/cart/${productId}`, { quantity });
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+export async function removeFromCart(productId: string): Promise<boolean> {
+  try {
+    const { data } = await api.delete<{ status: string }>(`/cart/${productId}`);
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+// Seller report (analytics)
+export interface SellerReportProduct {
+  id: string;
+  name: string;
+  status: string;
+}
+
+export interface SellerReportSoldItem {
+  productName: string;
+  quantity: number;
+  orderId: string;
+}
+
+export interface SellerReportOrder {
+  id: string;
+  buyerId: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  items: Array<{ productName: string; quantity: number; price: number }>;
+}
+
+export interface SellerReport {
+  rating: number;
+  ratingCount: number;
+  productsTotal: number;
+  productsActive: number;
+  productsArchived: number;
+  salesTotal: number;
+  productsByCategory: { categoryId: string | null; categoryName: string; count: number }[];
+  productList: SellerReportProduct[];
+  productsSold: SellerReportSoldItem[];
+  soldCount: number;
+  ordersCompleted: SellerReportOrder[];
+  ordersInProgress: SellerReportOrder[];
+}
+
+export async function sellerReport(): Promise<SellerReport | null> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      rating: number;
+      ratingCount: number;
+      productsTotal: number;
+      productsActive: number;
+      productsArchived: number;
+      salesTotal: number;
+      productsByCategory: SellerReport["productsByCategory"];
+      productList: SellerReport["productList"];
+      productsSold: SellerReport["productsSold"];
+      soldCount: number;
+      ordersCompleted: SellerReport["ordersCompleted"];
+      ordersInProgress: SellerReport["ordersInProgress"];
+    }>("/seller/report");
+    if (data.status === "success") {
+      return {
+        rating: data.rating ?? 0,
+        ratingCount: data.ratingCount ?? 0,
+        productsTotal: data.productsTotal ?? 0,
+        productsActive: data.productsActive ?? 0,
+        productsArchived: data.productsArchived ?? 0,
+        salesTotal: data.salesTotal ?? 0,
+        productsByCategory: data.productsByCategory ?? [],
+        productList: data.productList ?? [],
+        productsSold: data.productsSold ?? [],
+        soldCount: data.soldCount ?? 0,
+        ordersCompleted: data.ordersCompleted ?? [],
+        ordersInProgress: data.ordersInProgress ?? [],
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

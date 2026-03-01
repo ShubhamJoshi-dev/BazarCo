@@ -86,20 +86,27 @@ export function ComingSoonHero() {
           <span className="font-semibold text-[var(--brand-blue)]">August 20, 2026</span>
         </motion.p>
 
-        {user && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-          >
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          {user ? (
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-red)]/20 border border-[var(--brand-red)]/50 px-5 py-2.5 text-sm font-medium text-[var(--brand-red)] hover:bg-[var(--brand-red)]/30"
             >
               Go to Dashboard
             </Link>
-          </motion.div>
-        )}
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-blue)]/20 border border-[var(--brand-blue)]/50 px-5 py-2.5 text-sm font-medium text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/30"
+            >
+              Login
+            </Link>
+          )}
+        </motion.div>
       </motion.div>
 
       <motion.div

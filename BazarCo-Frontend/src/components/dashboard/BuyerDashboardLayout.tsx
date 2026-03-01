@@ -59,6 +59,16 @@ export function BuyerDashboardLayout({
               Favourites
             </Link>
             <Link
+              href="/dashboard/cart"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/dashboard/cart"
+                  ? "text-[var(--brand-blue)]"
+                  : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+            >
+              Cart
+            </Link>
+            <Link
               href="/dashboard/profile"
               className={`text-sm font-medium transition-colors ${
                 pathname === "/dashboard/profile"
