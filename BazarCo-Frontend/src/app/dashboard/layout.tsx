@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { BuyerDashboardLayout } from "@/components/dashboard/BuyerDashboardLayout";
 import { SellerDashboardLayout } from "@/components/dashboard/SellerDashboardLayout";
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const t = useTranslations("dashboard");
 
   useEffect(() => {
     if (loading) return;
@@ -24,8 +26,8 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--brand-black)] flex items-center justify-center">
-        <p className="text-neutral-400">Loading...</p>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <p className="text-[var(--brand-muted)]">{t("loading")}</p>
       </div>
     );
   }
