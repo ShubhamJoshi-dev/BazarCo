@@ -15,6 +15,26 @@ export function isAlgoliaConfigured(): boolean {
   return !!(env.ALGOLIA_APP_ID && env.ALGOLIA_WRITE_API_KEY);
 }
 
+/** Set index settings so full-text search works on name and description. Call once at startup or when creating the index. */
+export async function setAlgoliaIndexSettings(): Promise<boolean> {
+  const c = getClient();
+  if (!c) return false;
+  try {
+    await c.setSettings({
+      indexName: env.ALGOLIA_INDEX_NAME,
+      indexSettings: {
+        searchableAttributes: ["name", "description"],
+        attributesForFaceting: ["status", "category", "tags"],
+      },
+    });
+    return true;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Algolia setSettings error]", message);
+    return false;
+  }
+}
+
 export interface AlgoliaProductRecord {
   objectID: string;
   name: string;
@@ -40,7 +60,7 @@ export interface BrowseProductHit {
   createdBy: string;
 }
 
-/** Search products (Algolia). Index must have attributesForFaceting including "status", "category", "tags" for filters to work. */
+/** Full-text search products in Algolia by name and description. Uses restrictSearchableAttributes so the query matches both fields. Index must have attributesForFaceting (status, category, tags) for filters; ensure name and description are searchable in the index. */
 export async function searchProducts(params: {
   query: string;
   category?: string;
@@ -51,6 +71,7 @@ export async function searchProducts(params: {
   const c = getClient();
   if (!c) return { hits: [], nbHits: 0, page: 0, nbPages: 0 };
   const { query = "", category, tags, page = 0, hitsPerPage = 24 } = params;
+  const searchQuery = typeof query === "string" ? query.trim() : "";
   try {
     const filters: string[] = ["status:active"];
     if (category?.trim()) filters.push(`category:"${category.trim()}"`);
@@ -58,11 +79,13 @@ export async function searchProducts(params: {
       const tagFilters = tags.filter((t) => t?.trim()).map((t) => `tags:"${t.trim()}"`);
       if (tagFilters.length) filters.push(`(${tagFilters.join(" OR ")})`);
     }
+    // Full-text search on name and description: restrict searchable attributes so the query matches both fields
     const searchParams: Record<string, unknown> = {
-      query: query.trim() || "",
+      query: searchQuery,
       page,
       hitsPerPage,
       attributesToRetrieve: ["objectID", "name", "description", "price", "imageUrl", "category", "tags", "createdBy"],
+      restrictSearchableAttributes: ["name", "description"],
     };
     if (filters.length) searchParams.filters = filters.join(" AND ");
     const res = await c.searchSingleIndex({
@@ -82,7 +105,9 @@ export async function searchProducts(params: {
       createdBy: String(h.createdBy ?? ""),
     }));
     return { hits: browseHits, nbHits, page: resPage, nbPages };
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Algolia search error]", message);
     return { hits: [], nbHits: 0, page: 0, nbPages: 0 };
   }
 }
