@@ -10,6 +10,7 @@ const CLUSTER_MONGO_ENABLED = process.env.CLUSTER_MONGO_ENABLED === "true" || pr
 const CLUSTER_MONGO_URI = process.env.CLUSTER_MONGO_URI ?? "";
 const APP_MAIL = process.env.APP_MAIL ?? "";
 const APP_PW = process.env.APP_PW ?? "";
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "";
 
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
@@ -20,6 +21,7 @@ export const env = {
   CLUSTER_MONGO_URI,
   APP_MAIL,
   APP_PW,
+  CORS_ORIGIN,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;

@@ -1,23 +1,31 @@
+import cors from "cors";
 import express, { type Express, type Request, type Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import { env } from "./config/env";
 import { getOpenApiSpec } from "./config/openapi";
 import router from "./routes";
 
+function getCorsOrigin(): string | string[] | boolean {
+  if (!env.CORS_ORIGIN.trim()) {
+    return true;
+  }
+  const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  return origins.length === 1 ? origins[0]! : origins;
+}
+
+const corsOptions: cors.CorsOptions = {
+  origin: getCorsOrigin(),
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
+
 export function createApp(): Express {
   const app = express();
   const openApiSpec = getOpenApiSpec(env.BASE_URL);
 
-  app.use((_req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    if (_req.method === "OPTIONS") {
-      res.status(204).end();
-      return;
-    }
-    next();
-  });
+  app.use(cors(corsOptions));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
