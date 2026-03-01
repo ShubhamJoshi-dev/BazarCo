@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Package, ImageIcon, Filter, ChevronRight, Heart } from "lucide-react";
+import { Search, Package, ImageIcon, Filter, ChevronRight, Heart, X } from "lucide-react";
 import type { Product, Category, Tag } from "@/types/api";
 import { browseProducts, favouriteAdd, favouriteRemove, favouriteCheck } from "@/lib/api";
 
@@ -59,15 +59,15 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Search bar — top, full width */}
+      {/* Search bar — modern, no heavy border */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-20 border-b border-white/10 bg-[var(--brand-black)]/95 backdrop-blur-md"
+        className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-xl"
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-[var(--brand-blue)] transition-colors pointer-events-none z-10" />
             <input
               type="search"
               value={query}
@@ -76,9 +76,19 @@ export default function BrowsePage() {
                 setPage(0);
               }}
               placeholder="Search products by name or description…"
-              className="w-full rounded-xl border border-white/10 bg-white/5 pl-12 pr-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 transition-all"
+              className="w-full rounded-2xl bg-white/[0.06] pl-12 pr-12 py-3.5 text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:bg-white/[0.08] focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-all duration-200 border border-transparent"
               aria-label="Search products"
             />
+            {query.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setQuery(""); setPage(0); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/10 transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
@@ -91,7 +101,7 @@ export default function BrowsePage() {
           transition={{ delay: 0.05 }}
           className="w-56 shrink-0 hidden sm:block"
         >
-          <div className="sticky top-24 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="sticky top-24 rounded-2xl bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--brand-white)] mb-3">
               <Filter className="w-4 h-4 text-[var(--brand-blue)]" />
               Filters
@@ -180,7 +190,7 @@ export default function BrowsePage() {
                   key={i}
                   initial={{ opacity: 0.3 }}
                   animate={{ opacity: 0.6 }}
-                  className="rounded-xl border border-white/10 bg-white/5 overflow-hidden aspect-[3/4]"
+                  className="rounded-2xl bg-white/[0.04] overflow-hidden aspect-[3/4]"
                 />
               ))}
             </div>
@@ -190,7 +200,7 @@ export default function BrowsePage() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-[var(--brand-red)]/30 bg-[var(--brand-red)]/10 p-8 text-center"
+              className="rounded-2xl bg-[var(--brand-red)]/10 p-8 text-center shadow-[0_0_0_1px_rgba(229,115,115,0.2)]"
             >
               <p className="text-[var(--brand-white)] font-medium mb-1">Could not load products</p>
               <p className="text-sm text-neutral-400 mb-2">{fetchError}</p>
@@ -202,7 +212,7 @@ export default function BrowsePage() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center"
+              className="rounded-2xl bg-white/[0.04] p-12 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
             >
               <Package className="mx-auto w-14 h-14 text-neutral-600 mb-4" />
               <p className="text-[var(--brand-white)] font-medium mb-1">No products found</p>
@@ -232,7 +242,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setPage((prev) => Math.max(0, prev - 1))}
                 disabled={page === 0}
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[var(--brand-white)] hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
+                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors"
               >
                 Previous
               </button>
@@ -243,7 +253,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setPage((prev) => Math.min(nbPages - 1, prev + 1))}
                 disabled={page >= nbPages - 1}
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[var(--brand-white)] hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
+                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors"
               >
                 Next
               </button>
@@ -276,7 +286,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       exit={{ opacity: 0 }}
       transition={{ delay: index * 0.03, type: "spring", stiffness: 400, damping: 30 }}
       whileHover={{ y: -4 }}
-      className="group rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] transition-all duration-200"
+      className="group rounded-2xl bg-white/[0.04] overflow-hidden hover:bg-white/[0.07] transition-all duration-200 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_24px_-8px_rgba(0,0,0,0.3)]"
     >
       <Link href={`/dashboard/product/${product.id}`} className="block">
       <div className="aspect-square bg-white/5 relative overflow-hidden">

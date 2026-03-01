@@ -8,11 +8,17 @@ import { connectDb } from "./config/db";
 import { env } from "./config/env";
 import { startScheduler } from "./jobs/scheduler";
 import { logger } from "./lib/logger";
+import { isAlgoliaConfigured, setAlgoliaIndexSettings } from "./services/algolia.service";
 
 const app = createApp();
 
 async function start(): Promise<void> {
   await connectDb();
+  if (isAlgoliaConfigured()) {
+    const ok = await setAlgoliaIndexSettings();
+    if (ok) logger.info("Algolia index settings applied (searchableAttributes: name, description)");
+    else logger.warn("Algolia setSettings failed; search may still work if index is already configured");
+  }
   startScheduler();
   app.listen(env.PORT, () => {
     logger.info("Server running", { url: `http://localhost:${env.PORT}`, env: env.NODE_ENV });
