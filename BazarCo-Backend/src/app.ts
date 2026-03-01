@@ -5,25 +5,53 @@ import { env } from "./config/env";
 import { getOpenApiSpec } from "./config/openapi";
 import router from "./routes";
 
-function getCorsOrigin(): string | string[] | boolean {
-  if (!env.CORS_ORIGIN.trim()) {
-    return true;
+function getAllowedOrigins(): string[] | null {
+  if (!env.CORS_ORIGIN.trim()) return null;
+  return env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+}
+
+function corsOriginCallback(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean | string) => void
+): void {
+  const allowed = getAllowedOrigins();
+  if (!allowed || allowed.length === 0) {
+    callback(null, true);
+    return;
   }
-  const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
-  return origins.length === 1 ? origins[0]! : origins;
+  if (!origin) {
+    callback(null, true);
+    return;
+  }
+  const allow = allowed.includes(origin);
+  callback(null, allow ? origin : false);
 }
 
 const corsOptions: cors.CorsOptions = {
-  origin: getCorsOrigin(),
+  origin: corsOriginCallback,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: false,
   optionsSuccessStatus: 204,
+  preflightContinue: false,
 };
 
 export function createApp(): Express {
   const app = express();
   const openApiSpec = getOpenApiSpec(env.BASE_URL);
+
+  // Handle preflight first so it always returns 204 before any other middleware
+  app.use((req: Request, res: Response, next: () => void) => {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
 
   app.use(cors(corsOptions));
   app.use(express.json());

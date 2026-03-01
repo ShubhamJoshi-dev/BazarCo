@@ -32,7 +32,7 @@ function buildOpenApiSpec(serverUrl: string) {
           },
         },
       },
-      "/api/v1/health": {
+      "/health": {
         get: {
           operationId: "getHealth",
           summary: "Health check",
@@ -59,7 +59,7 @@ function buildOpenApiSpec(serverUrl: string) {
           },
         },
       },
-      "/api/v1/notify": {
+      "/notify": {
         post: {
           operationId: "postNotify",
           summary: "Notify signup",

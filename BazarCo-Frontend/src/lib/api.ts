@@ -9,13 +9,13 @@ const api = axios.create({
 });
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  const { data } = await api.get<HealthResponse>("/api/v1/health");
+  const { data } = await api.get<HealthResponse>("/health");
   return data;
 }
 
 export async function notifySignUp(email: string): Promise<NotifyResponse> {
   try {
-    const { data } = await api.post<NotifyResponse>("/api/v1/notify", {
+    const { data } = await api.post<NotifyResponse>("/notify", {
       email: email.trim(),
     });
     return data;

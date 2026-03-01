@@ -4,7 +4,7 @@ import { notifyRouter } from "./notify";
 
 const router = Router();
 
-router.use("/api/v1/health", healthRouter);
-router.use("/api/v1/notify", notifyRouter);
+router.use("/health", healthRouter);
+router.use("/notify", notifyRouter);
 
 export default router;
