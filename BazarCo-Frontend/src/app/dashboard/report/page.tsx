@@ -299,7 +299,7 @@ export default function ReportPage() {
                   <Tooltip
                     contentStyle={{ backgroundColor: "var(--brand-black)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
                     labelStyle={{ color: "var(--brand-white)" }}
-                    formatter={(value: number) => [value, "Products"]}
+                    formatter={(value: number | undefined) => [value ?? 0, "Products"]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -328,7 +328,7 @@ export default function ReportPage() {
                   <YAxis tick={{ fill: "#a3a3a3", fontSize: 12 }} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "var(--brand-black)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
-                    formatter={(value: number) => [value, "Products"]}
+                    formatter={(value: number | undefined) => [value ?? 0, "Products"]}
                     labelStyle={{ color: "var(--brand-white)" }}
                   />
                   <Legend />
