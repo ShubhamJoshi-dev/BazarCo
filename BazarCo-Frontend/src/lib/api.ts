@@ -3,14 +3,14 @@ import { getBackendBaseUrl } from "@/config/env";
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const base = getBackendBaseUrl();
-  const res = await fetch(`${base}/health`, { cache: "no-store" });
+  const res = await fetch(`${base}/api/v1/health`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
   return res.json() as Promise<HealthResponse>;
 }
 
 export async function notifySignUp(email: string): Promise<NotifyResponse> {
   const base = getBackendBaseUrl();
-  const res = await fetch(`${base}/notify`, {
+  const res = await fetch(`${base}/api/v1/notify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: email.trim() }),
