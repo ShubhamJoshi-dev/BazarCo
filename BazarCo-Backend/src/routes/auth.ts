@@ -2,7 +2,6 @@ import { Router } from "express";
 import {
   getMe,
   patchProfile,
-  postSignup,
   postLogin,
   postDevLogin,
   postForgotPassword,
@@ -12,7 +11,6 @@ import { requireAuth } from "../middleware/auth.middleware";
 
 export const authRouter = Router();
 
-authRouter.post("/signup", postSignup);
 authRouter.post("/login", postLogin);
 authRouter.post("/dev-login", postDevLogin);
 authRouter.post("/forgot-password", postForgotPassword);
