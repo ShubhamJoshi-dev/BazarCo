@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
-import { Toast, type ToastItem } from "@/components/Toast";
+import { Toast } from "@/components/Toast";
+
+type ToastItem = { id: number; type: "success" | "error"; message: string };
 
 let toastId = 0;
 function nextId() {
@@ -39,7 +41,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <Toast toasts={toasts} onDismiss={dismiss} autoDismissMs={4000} />
+      {toasts.map((t) => (
+        <Toast
+          key={t.id}
+          message={t.message}
+          visible
+          onDismiss={() => dismiss(t.id)}
+          variant={t.type}
+          duration={4000}
+        />
+      ))}
     </ToastContext.Provider>
   );
 }

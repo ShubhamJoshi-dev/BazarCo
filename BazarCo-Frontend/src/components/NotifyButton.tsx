@@ -3,9 +3,11 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { notifySignUp } from "@/lib/api";
-import { Toast, type ToastItem } from "@/components/Toast";
+import { Toast } from "@/components/Toast";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type ToastItem = { id: number; type: "success" | "error"; message: string };
 
 function BellIcon({ className }: { className?: string }) {
   return (
@@ -160,7 +162,16 @@ export function NotifyButton() {
         )}
       </AnimatePresence>
 
-      <Toast toasts={toasts} onDismiss={dismissToast} />
+      {toasts.map((t) => (
+        <Toast
+          key={t.id}
+          message={t.message}
+          visible
+          onDismiss={() => dismissToast(t.id)}
+          variant={t.type}
+          duration={4000}
+        />
+      ))}
     </>
   );
 }

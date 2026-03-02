@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2, ShoppingBag, Loader2, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { confirmCheckoutSuccess } from "@/lib/api";
+import { confirmCheckoutSuccess, type Order } from "@/lib/api";
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
@@ -15,7 +15,7 @@ export default function CheckoutSuccessPage() {
   const tCommon = useTranslations("common");
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [orders, setOrders] = useState<Array<{ id: string; sellerId: string; total: number; status: string; items: unknown[] }>>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function CheckoutSuccessPage() {
                   <span className="font-semibold text-[var(--brand-white)]">${Number(order.total).toFixed(2)}</span>
                 </div>
                 <ul className="text-sm text-neutral-400 space-y-1">
-                  {order.items?.map((item: { productName?: string; quantity?: number; price?: number }, idx: number) => (
+                  {order.items?.map((item, idx) => (
                     <li key={idx}>
                       {item.productName} &times; {item.quantity} — ${((Number(item.price) || 0) * (item.quantity || 0)).toFixed(2)}
                     </li>
