@@ -1,23 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { User, Settings } from "lucide-react";
+import { User, Settings, MapPin, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
-import { authUpdateProfile } from "@/lib/api";
-
-const sidebarNav = [
-  { id: "profile", label: "Public profile", Icon: User },
-  { id: "account", label: "Account", Icon: Settings },
-];
+import { authUpdateProfile, listAddresses, createAddress, deleteAddress, type Address, type ShippingAddressInput } from "@/lib/api";
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
+  const t = useTranslations("profile");
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saved" | "error" | null>(null);
   const [activeSection, setActiveSection] = useState("profile");
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addressForm, setAddressForm] = useState<ShippingAddressInput & { label: string }>({
+    label: "Home",
+    line1: "",
+    line2: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "",
+    phone: "",
+  });
+  const [addingAddress, setAddingAddress] = useState(false);
+
+  const loadAddresses = useCallback(() => {
+    listAddresses().then(setAddresses);
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === "addresses") loadAddresses();
+  }, [activeSection, loadAddresses]);
 
   useEffect(() => {
     setName(user?.name ?? "");
@@ -59,7 +76,11 @@ export default function ProfilePage() {
           </div>
         </div>
         <nav className="space-y-0.5">
-          {sidebarNav.map((item) => {
+          {[
+            { id: "profile", labelKey: "publicProfile" as const, Icon: User },
+            { id: "addresses", labelKey: "addresses" as const, Icon: MapPin },
+            { id: "account", labelKey: "account" as const, Icon: Settings },
+          ].map((item) => {
             const active = activeSection === item.id;
             const Icon = item.Icon;
             return (
@@ -74,7 +95,7 @@ export default function ProfilePage() {
                 }`}
               >
                 <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
-                {item.label}
+                {t(item.labelKey)}
               </button>
             );
           })}
@@ -87,16 +108,135 @@ export default function ProfilePage() {
         transition={{ duration: 0.3, delay: 0.05 }}
         className="flex-1 min-w-0"
       >
+        {activeSection === "addresses" && (
+          <div className="settings-card rounded-2xl border border-white/10 overflow-hidden card-glow">
+            <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between bg-white/[0.02]">
+              <h2 className="text-lg font-bold text-[var(--brand-white)]">{t("addresses")}</h2>
+              <Link href="/dashboard" className="text-sm text-[var(--brand-blue)] hover:underline">{t("backToDashboard")}</Link>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-sm text-neutral-400">{t("addressesHint")}</p>
+              <ul className="space-y-3">
+                {addresses.map((addr) => (
+                  <li
+                    key={addr.id}
+                    className="flex items-start justify-between gap-4 rounded-xl bg-white/[0.03] p-4 border border-white/10"
+                  >
+                    <div>
+                      <p className="font-medium text-[var(--brand-white)]">{addr.label}</p>
+                      <p className="text-sm text-neutral-400">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
+                      <p className="text-sm text-neutral-400">{addr.city}, {addr.state && `${addr.state} `}{addr.zip} {addr.country}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (confirm(t("deleteAddress"))) {
+                          await deleteAddress(addr.id);
+                          loadAddresses();
+                        }
+                      }}
+                      className="p-2 rounded-lg text-neutral-400 hover:text-[var(--brand-red)] hover:bg-[var(--brand-red)]/10 transition-colors"
+                      aria-label="Delete address"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!addressForm.line1.trim() || !addressForm.city.trim() || !addressForm.country.trim()) return;
+                  setAddingAddress(true);
+                  const created = await createAddress({ ...addressForm, isDefault: addresses.length === 0 });
+                  setAddingAddress(false);
+                  if (created) {
+                    loadAddresses();
+                    setAddressForm({ label: "Home", line1: "", line2: "", city: "", state: "", zip: "", country: "", phone: "" });
+                  }
+                }}
+                className="space-y-3 rounded-xl bg-white/[0.03] p-4 border border-white/10"
+              >
+                <h3 className="text-sm font-medium text-[var(--brand-white)]">{t("addAddress")}</h3>
+                <input
+                  type="text"
+                  placeholder={t("labelPlaceholder")}
+                  value={addressForm.label}
+                  onChange={(e) => setAddressForm((f) => ({ ...f, label: e.target.value }))}
+                  className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                />
+                <input
+                  type="text"
+                  placeholder="Address line 1"
+                  value={addressForm.line1}
+                  onChange={(e) => setAddressForm((f) => ({ ...f, line1: e.target.value }))}
+                  className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Address line 2 (optional)"
+                  value={addressForm.line2}
+                  onChange={(e) => setAddressForm((f) => ({ ...f, line2: e.target.value }))}
+                  className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={addressForm.city}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
+                    className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="State"
+                    value={addressForm.state}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, state: e.target.value }))}
+                    className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="ZIP"
+                    value={addressForm.zip}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, zip: e.target.value }))}
+                    className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Country"
+                    value={addressForm.country}
+                    onChange={(e) => setAddressForm((f) => ({ ...f, country: e.target.value }))}
+                    className="w-full rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-[var(--brand-blue)]/50"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={addingAddress}
+                  className="rounded-lg bg-[var(--brand-blue)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-60"
+                >
+                  {addingAddress ? t("adding") : t("addAddress")}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {activeSection === "profile" && (
         <div className="settings-card rounded-2xl border border-white/10 overflow-hidden card-glow">
           <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between bg-white/[0.02]">
             <h2 className="text-lg font-bold text-[var(--brand-white)]">
-              Public profile
+              {t("publicProfile")}
             </h2>
             <Link
               href="/dashboard"
               className="text-sm text-[var(--brand-blue)] hover:underline"
             >
-              Back to dashboard
+              {t("backToDashboard")}
             </Link>
           </div>
 
@@ -197,6 +337,20 @@ export default function ProfilePage() {
             </motion.button>
           </form>
         </div>
+        )}
+
+        {activeSection === "account" && (
+          <div className="settings-card rounded-2xl border border-white/10 overflow-hidden card-glow">
+            <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between bg-white/[0.02]">
+              <h2 className="text-lg font-bold text-[var(--brand-white)]">{t("account")}</h2>
+              <Link href="/dashboard" className="text-sm text-[var(--brand-blue)] hover:underline">{t("backToDashboard")}</Link>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-neutral-400">{t("accountEmail")}: {user?.email}</p>
+              <p className="text-sm text-neutral-400 mt-2">{t("accountRole")}: {user?.role}</p>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );

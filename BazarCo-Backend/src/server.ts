@@ -20,6 +20,9 @@ async function start(): Promise<void> {
     else logger.warn("Algolia setSettings failed; search may still work if index is already configured");
   }
   startScheduler();
+  if (!env.STRIPE_SECRET_KEY) {
+    logger.warn("STRIPE_SECRET_KEY is not set; checkout will return 'Stripe is not configured'");
+  }
   app.listen(env.PORT, () => {
     logger.info("Server running", { url: `http://localhost:${env.PORT}`, env: env.NODE_ENV });
   });

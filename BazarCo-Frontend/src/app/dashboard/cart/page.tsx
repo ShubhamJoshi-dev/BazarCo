@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShoppingCart, ImageIcon, Plus, Minus, Trash2 } from "lucide-react";
+import { ShoppingCart, ImageIcon, Plus, Minus, Trash2, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   getCart,
   updateCartItemQuantity,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/api";
 
 export default function CartPage() {
+  const t = useTranslations("common");
   const [items, setItems] = useState<CartItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -170,17 +172,26 @@ export default function CartPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/5 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            className="rounded-2xl bg-white/[0.04] p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
           >
             <p className="text-lg font-semibold text-[var(--brand-white)]">
               Total: <span className="text-[var(--brand-blue)]">${total.toFixed(2)}</span>
             </p>
-            <Link
-              href="/dashboard/browse"
-              className="rounded-xl border border-white/20 px-5 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/5 text-center transition-colors"
-            >
-              Continue shopping
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/browse"
+                className="rounded-xl border border-white/20 px-5 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/5 text-center transition-colors"
+              >
+                {t("continueShopping")}
+              </Link>
+              <Link
+                href="/dashboard/checkout"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-blue)]/90 transition-colors"
+              >
+                {t("proceedToCheckout")}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
           </motion.div>
         </>
       )}

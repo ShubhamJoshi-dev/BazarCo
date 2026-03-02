@@ -27,6 +27,8 @@ const ALGOLIA_APP_ID = (process.env.ALGOLIA_APP_ID ?? "").trim();
 const ALGOLIA_WRITE_API_KEY = (process.env.ALGOLIA_WRITE_API_KEY ?? "").trim();
 const ALGOLIA_INDEX_NAME = (process.env.ALGOLIA_INDEX_NAME ?? "products").trim();
 
+const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY ?? "").trim();
+
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
   PORT,
@@ -50,6 +52,7 @@ export const env = {
   ALGOLIA_APP_ID,
   ALGOLIA_WRITE_API_KEY,
   ALGOLIA_INDEX_NAME,
+  STRIPE_SECRET_KEY,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;

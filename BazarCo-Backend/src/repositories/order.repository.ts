@@ -8,32 +8,47 @@ export interface OrderItemInput {
   price: number;
 }
 
+export interface ShippingAddressInput {
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  zip?: string;
+  country: string;
+  phone?: string;
+}
+
 export async function createOrder(data: {
   buyerId: string | Types.ObjectId;
   sellerId: string | Types.ObjectId;
   items: OrderItemInput[];
   total: number;
+  status?: import("../models/order.model").OrderStatus;
+  stripeSessionId?: string;
+  shippingAddress?: ShippingAddressInput;
+  riderId?: string | Types.ObjectId;
+  urgent?: boolean;
 }) {
   const doc = await Order.create(data);
   return doc.toObject();
 }
 
 export async function findById(id: string) {
-  const doc = await Order.findById(id).lean();
+  const doc = await Order.findById(id).populate("riderId", "name phone userId").lean();
   return doc ?? null;
 }
 
 export async function findBySellerId(sellerId: string, options?: { status?: OrderStatus }) {
   const query: Record<string, unknown> = { sellerId };
   if (options?.status) query.status = options.status;
-  const docs = await Order.find(query).sort({ createdAt: -1 }).lean();
+  const docs = await Order.find(query).populate("riderId", "name phone userId").sort({ createdAt: -1 }).lean();
   return docs;
 }
 
 export async function findByBuyerId(buyerId: string, options?: { status?: OrderStatus }) {
   const query: Record<string, unknown> = { buyerId };
   if (options?.status) query.status = options.status;
-  const docs = await Order.find(query).sort({ createdAt: -1 }).lean();
+  const docs = await Order.find(query).populate("riderId", "name phone userId").sort({ createdAt: -1 }).lean();
   return docs;
 }
 
@@ -42,7 +57,9 @@ export async function updateStatus(orderId: string, sellerId: string, status: Or
     { _id: orderId, sellerId },
     { $set: { status } },
     { new: true }
-  ).lean();
+  )
+    .populate("riderId", "name phone userId")
+    .lean();
   return doc ?? null;
 }
 
@@ -68,7 +85,7 @@ export async function getSellerOrderStats(sellerId: string): Promise<{
 }> {
   const [completedDocs, inProgressDocs] = await Promise.all([
     Order.find({ sellerId, status: "completed" }).sort({ createdAt: -1 }).limit(50).lean(),
-    Order.find({ sellerId, status: { $in: ["pending", "in_progress"] } }).sort({ createdAt: -1 }).limit(50).lean(),
+    Order.find({ sellerId, status: { $in: ["pending", "paid", "in_progress"] } }).sort({ createdAt: -1 }).limit(50).lean(),
   ]);
 
   const toDto = (d: Record<string, unknown> & { _id: Types.ObjectId; buyerId: Types.ObjectId; items: Array<{ productName: string; quantity: number; price: number }>; total: number; status: string; createdAt: Date }) => ({

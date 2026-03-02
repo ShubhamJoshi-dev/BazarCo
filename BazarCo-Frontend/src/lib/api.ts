@@ -520,6 +520,167 @@ export async function removeFromCart(productId: string): Promise<boolean> {
   }
 }
 
+export interface ShippingAddressInput {
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  zip?: string;
+  country: string;
+  phone?: string;
+}
+
+export async function createCheckoutSession(shippingAddress?: ShippingAddressInput, urgent?: boolean): Promise<{ url: string | null; error?: string }> {
+  try {
+    const { data } = await api.post<{ status: string; url?: string }>("/checkout/create-session", {
+      shippingAddress: shippingAddress ?? undefined,
+      urgent: !!urgent,
+    });
+    if (data.status === "success" && data.url) return { url: data.url };
+    return { url: null, error: "Could not start checkout" };
+  } catch (err) {
+    const data = axios.isAxiosError(err) ? err.response?.data : null;
+    const msg = data && typeof data === "object" && typeof (data as { message?: unknown }).message === "string"
+      ? (data as { message: string }).message
+      : null;
+    return { url: null, error: msg ?? "Checkout failed" };
+  }
+}
+
+export interface OrderItem {
+  productId?: string;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+export interface OrderShippingAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  zip?: string;
+  country: string;
+  phone?: string;
+}
+
+export interface OrderRider {
+  id: string;
+  name: string;
+  phone?: string;
+}
+
+export interface Order {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  items: OrderItem[];
+  total: number;
+  status: string;
+  createdAt: string;
+  shippingAddress?: OrderShippingAddress;
+  rider?: OrderRider | null;
+  urgent?: boolean;
+}
+
+export async function confirmCheckoutSuccess(sessionId: string): Promise<{ orders: Order[]; error?: string }> {
+  try {
+    const { data } = await api.post<{ status: string; orders?: Order[] }>("/checkout/success", { session_id: sessionId });
+    if (data.status === "success") return { orders: data.orders ?? [] };
+    return { orders: [], error: "Could not confirm order" };
+  } catch (err) {
+    const message = axios.isAxiosError(err) && err.response?.data && typeof (err.response.data as { message?: string }).message === "string"
+      ? (err.response.data as { message: string }).message
+      : "Confirmation failed";
+    return { orders: [], error: message };
+  }
+}
+
+export interface Address {
+  id: string;
+  userId: string;
+  label: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  zip?: string;
+  country: string;
+  phone?: string;
+  isDefault: boolean;
+}
+
+export async function listAddresses(): Promise<Address[]> {
+  try {
+    const { data } = await api.get<{ status: string; addresses?: Address[] }>("/addresses");
+    if (data.status === "success") return data.addresses ?? [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createAddress(input: ShippingAddressInput & { label?: string; isDefault?: boolean }): Promise<Address | null> {
+  try {
+    const { data } = await api.post<{ status: string; address?: Address }>("/addresses", input);
+    if (data.status === "success" && data.address) return data.address;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateAddress(id: string, input: Partial<ShippingAddressInput> & { label?: string; isDefault?: boolean }): Promise<Address | null> {
+  try {
+    const { data } = await api.patch<{ status: string; address?: Address }>(`/addresses/${id}`, input);
+    if (data.status === "success" && data.address) return data.address;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteAddress(id: string): Promise<boolean> {
+  try {
+    const { data } = await api.delete<{ status: string }>(`/addresses/${id}`);
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+export async function listOrders(options?: { asSeller?: boolean; status?: string }): Promise<Order[]> {
+  try {
+    const params: Record<string, string> = {};
+    if (options?.asSeller) params.as = "seller";
+    if (options?.status) params.status = options.status;
+    const { data } = await api.get<{ status: string; orders?: Order[] }>("/orders", { params });
+    if (data.status === "success") return data.orders ?? [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getOrderById(id: string): Promise<Order | null> {
+  try {
+    const { data } = await api.get<{ status: string; order?: Order }>(`/orders/${id}`);
+    if (data.status === "success" && data.order) return data.order;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateOrderStatus(orderId: string, status: string): Promise<boolean> {
+  try {
+    const { data } = await api.patch<{ status: string }>(`/orders/${orderId}/status`, { status });
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
 // Seller report (analytics)
 export interface SellerReportProduct {
   id: string;

@@ -12,7 +12,7 @@ export async function listOrders(req: ReqWithUser, res: Response): Promise<void>
     return;
   }
   const asSeller = req.query.as === "seller";
-  const status = typeof req.query.status === "string" && ["pending", "in_progress", "completed", "cancelled"].includes(req.query.status)
+  const status = typeof req.query.status === "string" && ["pending", "paid", "in_progress", "completed", "cancelled"].includes(req.query.status)
     ? req.query.status
     : undefined;
 
@@ -21,7 +21,8 @@ export async function listOrders(req: ReqWithUser, res: Response): Promise<void>
     : await orderRepo.findByBuyerId(user.id, status ? { status } : undefined);
 
   const orders = docs.map((d) => {
-    const doc = d as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date };
+    const doc = d as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date; shippingAddress?: unknown; riderId?: { _id: { toString(): string }; name: string; phone?: string } | null; urgent?: boolean };
+    const rider = doc.riderId;
     return {
       id: doc._id.toString(),
       buyerId: doc.buyerId?.toString?.() ?? doc.buyerId,
@@ -30,6 +31,9 @@ export async function listOrders(req: ReqWithUser, res: Response): Promise<void>
       total: doc.total,
       status: doc.status,
       createdAt: doc.createdAt?.toISOString?.(),
+      shippingAddress: doc.shippingAddress,
+      urgent: !!doc.urgent,
+      rider: rider ? { id: rider._id.toString(), name: rider.name, phone: rider.phone } : null,
     };
   });
 
@@ -100,6 +104,42 @@ export async function createOrder(req: ReqWithUser, res: Response): Promise<void
   });
 }
 
+export async function getOrderById(req: ReqWithUser, res: Response): Promise<void> {
+  const user = req.user;
+  if (!user) {
+    errorResponse(res, 401, "Authentication required");
+    return;
+  }
+  const orderId = req.params.id;
+  const order = await orderRepo.findById(orderId);
+  if (!order) {
+    errorResponse(res, 404, "Order not found");
+    return;
+  }
+  const doc = order as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date; shippingAddress?: unknown; riderId?: { _id: { toString(): string }; name: string; phone?: string } | null; urgent?: boolean };
+  const buyerId = doc.buyerId?.toString?.() ?? doc.buyerId;
+  const sellerId = doc.sellerId?.toString?.() ?? doc.sellerId;
+  if (buyerId !== user.id && sellerId !== user.id) {
+    errorResponse(res, 404, "Order not found");
+    return;
+  }
+  const rider = doc.riderId;
+  successResponse(res, 200, "Order", {
+    order: {
+      id: doc._id.toString(),
+      buyerId: doc.buyerId?.toString?.() ?? doc.buyerId,
+      sellerId: doc.sellerId?.toString?.() ?? doc.sellerId,
+      items: doc.items ?? [],
+      total: doc.total,
+      status: doc.status,
+      createdAt: doc.createdAt?.toISOString?.(),
+      shippingAddress: doc.shippingAddress,
+      urgent: !!doc.urgent,
+      rider: rider ? { id: rider._id.toString(), name: rider.name, phone: rider.phone } : null,
+    },
+  });
+}
+
 export async function updateOrderStatus(req: ReqWithUser, res: Response): Promise<void> {
   const user = req.user;
   if (!user) {
@@ -108,12 +148,13 @@ export async function updateOrderStatus(req: ReqWithUser, res: Response): Promis
   }
 
   const orderId = req.params.id;
-  const status = typeof req.body.status === "string" && ["pending", "in_progress", "completed", "cancelled"].includes(req.body.status)
-    ? req.body.status
+  const allowed = ["in_progress", "completed", "cancelled"] as const;
+  const status = typeof req.body.status === "string" && allowed.includes(req.body.status as (typeof allowed)[number])
+    ? (req.body.status as (typeof allowed)[number])
     : undefined;
 
   if (!status) {
-    errorResponse(res, 400, "Valid status required: pending, in_progress, completed, cancelled");
+    errorResponse(res, 400, "Valid status required: in_progress, completed, cancelled");
     return;
   }
 
@@ -123,7 +164,8 @@ export async function updateOrderStatus(req: ReqWithUser, res: Response): Promis
     return;
   }
 
-  const doc = updated as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date };
+  const doc = updated as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date; shippingAddress?: unknown; riderId?: { _id: { toString(): string }; name: string; phone?: string } | null; urgent?: boolean };
+  const rider = doc.riderId;
   successResponse(res, 200, "Order updated", {
     order: {
       id: doc._id.toString(),
@@ -133,6 +175,9 @@ export async function updateOrderStatus(req: ReqWithUser, res: Response): Promis
       total: doc.total,
       status: doc.status,
       createdAt: doc.createdAt?.toISOString?.(),
+      shippingAddress: doc.shippingAddress,
+      urgent: !!doc.urgent,
+      rider: rider ? { id: rider._id.toString(), name: rider.name, phone: rider.phone } : null,
     },
   });
 }

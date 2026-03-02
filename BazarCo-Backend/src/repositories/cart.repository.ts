@@ -41,3 +41,13 @@ export async function setItemQuantity(userId: string, productId: string, quantit
   if (quantity < 1) return removeItem(userId, productId);
   return addOrUpdateItem(userId, productId, quantity);
 }
+
+export async function clearCart(userId: string) {
+  const mongoose = await import("mongoose");
+  const result = await Cart.findOneAndUpdate(
+    { userId: new mongoose.Types.ObjectId(userId) },
+    { $set: { items: [] } },
+    { new: true }
+  ).lean();
+  return result ?? null;
+}

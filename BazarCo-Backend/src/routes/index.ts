@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { addressesRouter } from "./addresses";
 import { authRouter } from "./auth";
 import { cartRouter } from "./cart";
+import { checkoutRouter } from "./checkout";
 import { categoriesRouter } from "./categories";
 import { favouritesRouter } from "./favourites";
 import { healthRouter } from "./health";
@@ -12,8 +14,10 @@ import { tagsRouter } from "./tags";
 
 const router = Router();
 
+router.use("/addresses", addressesRouter);
 router.use("/auth", authRouter);
 router.use("/cart", cartRouter);
+router.use("/checkout", checkoutRouter);
 router.use("/categories", categoriesRouter);
 router.use("/favourites", favouritesRouter);
 router.use("/health", healthRouter);

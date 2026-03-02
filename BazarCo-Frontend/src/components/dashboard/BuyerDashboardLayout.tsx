@@ -82,6 +82,16 @@ export function BuyerDashboardLayout({
             >
               {t("profile")}
             </Link>
+            <Link
+              href="/dashboard/orders"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/dashboard/orders"
+                  ? "text-[var(--brand-blue)]"
+                  : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+            >
+              {t("orders")}
+            </Link>
             <div className="flex items-center gap-2">
               <LocaleSwitcher />
               <ThemeSwitcher />

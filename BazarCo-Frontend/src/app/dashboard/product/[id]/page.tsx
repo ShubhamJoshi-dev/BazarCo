@@ -22,6 +22,7 @@ import {
   type ProductDetailResponse,
   type ProductReview,
 } from "@/lib/api";
+import { Toast } from "@/components/Toast";
 import type { Product } from "@/types/api";
 
 export default function ProductDetailPage() {
@@ -36,7 +37,7 @@ export default function ProductDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartQty, setCartQty] = useState(1);
-  const [cartPopup, setCartPopup] = useState<{ show: boolean; productName: string }>({ show: false, productName: "" });
+  const [cartToast, setCartToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
 
   const fetchProduct = useCallback(async () => {
     if (!id) return;
@@ -81,7 +82,8 @@ export default function ProductDetailPage() {
     const result = await addToCart(id, cartQty);
     setAddingToCart(false);
     if (result.success) {
-      setCartPopup({ show: true, productName: result.productName ?? data.product.name });
+      const name = result.productName ?? data.product.name;
+      setCartToast({ show: true, message: `${name}${cartQty > 1 ? ` × ${cartQty}` : ""} added to cart` });
     }
   };
 
@@ -108,53 +110,12 @@ export default function ProductDetailPage() {
 
   return (
     <div className="space-y-8">
-      <AnimatePresence>
-        {cartPopup.show && (
-          <motion.div
-            key="cart-popup"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-            onClick={() => setCartPopup((p) => ({ ...p, show: false }))}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-2xl border border-white/10 bg-[var(--brand-black)] p-6 sm:p-8 max-w-md w-full shadow-xl"
-            >
-              <div className="text-center mb-6">
-                <div className="mx-auto w-14 h-14 rounded-full bg-[var(--brand-blue)]/20 flex items-center justify-center mb-4">
-                  <ShoppingCart className="w-7 h-7 text-[var(--brand-blue)]" />
-                </div>
-                <h3 className="text-xl font-bold text-[var(--brand-white)] mb-2">Added to cart</h3>
-                <p className="text-neutral-400 mb-1">
-                  <span className="font-medium text-[var(--brand-white)]">{cartPopup.productName}</span>
-                  {cartQty > 1 && ` × ${cartQty}`} has been added to your cart.
-                </p>
-                <p className="text-sm text-neutral-500">A confirmation email has been sent to your inbox.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/dashboard/cart"
-                  className="flex-1 rounded-xl bg-[var(--brand-blue)] py-3 text-center font-medium text-white hover:bg-[var(--brand-blue)]/90 transition-colors"
-                >
-                  View cart
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setCartPopup((p) => ({ ...p, show: false }))}
-                  className="flex-1 rounded-xl border border-white/20 py-3 font-medium text-[var(--brand-white)] hover:bg-white/5 transition-colors"
-                >
-                  Continue shopping
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Toast
+        message={cartToast.message}
+        visible={cartToast.show}
+        onDismiss={() => setCartToast((p) => ({ ...p, show: false }))}
+        duration={3500}
+      />
 
       <Link
         href="/dashboard/browse"
@@ -245,8 +206,17 @@ export default function ProductDetailPage() {
               disabled={addingToCart}
               className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-6 py-3.5 font-semibold text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-60 transition-colors"
             >
-              <ShoppingCart className="w-5 h-5" />
-              {addingToCart ? "Adding…" : "Add to cart"}
+              {addingToCart ? (
+                <>
+                  <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="inline-block h-5 w-5 rounded-full border-2 border-white/30 border-t-white" />
+                  Adding to cart…
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-5 h-5" />
+                  Add to cart
+                </>
+              )}
             </button>
           </div>
         </div>
