@@ -29,6 +29,9 @@ const ALGOLIA_INDEX_NAME = (process.env.ALGOLIA_INDEX_NAME ?? "products").trim()
 
 const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY ?? "").trim();
 
+const REDIS_URI = (process.env.REDIS_URI ?? "").trim();
+const UNSEND_MESSAGE_WINDOW_MINUTES = Number(process.env.UNSEND_MESSAGE_WINDOW_MINUTES) || 15;
+
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
   PORT,
@@ -53,6 +56,8 @@ export const env = {
   ALGOLIA_WRITE_API_KEY,
   ALGOLIA_INDEX_NAME,
   STRIPE_SECRET_KEY,
+  REDIS_URI,
+  UNSEND_MESSAGE_WINDOW_MINUTES,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;

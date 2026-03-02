@@ -92,6 +92,26 @@ export function BuyerDashboardLayout({
             >
               {t("orders")}
             </Link>
+            <Link
+              href="/dashboard/offers"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/dashboard/offers"
+                  ? "text-[var(--brand-blue)]"
+                  : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+            >
+              {t("offers")}
+            </Link>
+            <Link
+              href="/dashboard/chat"
+              className={`text-sm font-medium transition-colors ${
+                pathname?.startsWith("/dashboard/chat")
+                  ? "text-[var(--brand-blue)]"
+                  : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+            >
+              {t("chat")}
+            </Link>
             <div className="flex items-center gap-2">
               <LocaleSwitcher />
               <ThemeSwitcher />

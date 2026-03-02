@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, User, Package, BarChart3, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, User, Package, BarChart3, ShoppingBag, HandCoins, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
@@ -29,6 +29,8 @@ export function SellerDashboardLayout({
     { href: "/dashboard", label: t("dashboard"), Icon: LayoutDashboard },
     { href: "/dashboard/report", label: t("report"), Icon: BarChart3 },
     { href: "/dashboard/orders", label: t("orders"), Icon: ShoppingBag },
+    { href: "/dashboard/offers", label: t("offers"), Icon: HandCoins },
+    { href: "/dashboard/chat", label: t("chat"), Icon: MessageCircle },
     { href: "/dashboard/products", label: t("products"), Icon: Package },
     { href: "/dashboard/profile", label: t("profile"), Icon: User },
   ];

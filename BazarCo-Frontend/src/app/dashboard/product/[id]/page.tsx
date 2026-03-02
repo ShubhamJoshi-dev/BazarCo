@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,21 +13,32 @@ import {
   ShoppingCart,
   MessageSquare,
   Send,
+  HandCoins,
+  Loader2,
 } from "lucide-react";
 import {
   getProductById,
   addProductReview,
   toggleProductLike,
   addToCart,
+  createOffer,
+  listOffers,
+  createConversationByProduct,
   type ProductDetailResponse,
   type ProductReview,
 } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTranslations } from "next-intl";
 import { Toast } from "@/components/Toast";
 import type { Product } from "@/types/api";
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === "string" ? params.id : "";
+  const { user } = useAuth();
+  const t = useTranslations("offers");
+  const tChat = useTranslations("chat");
   const [data, setData] = useState<ProductDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -38,6 +49,12 @@ export default function ProductDetailPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartQty, setCartQty] = useState(1);
   const [cartToast, setCartToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+  const [actionToast, setActionToast] = useState<{ show: boolean; message: string; isError?: boolean }>({ show: false, message: "" });
+  const [myOfferOnProduct, setMyOfferOnProduct] = useState<{ id: string; status: string } | null>(null);
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerMessage, setOfferMessage] = useState("");
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
 
   const fetchProduct = useCallback(async () => {
     if (!id) return;
@@ -54,6 +71,57 @@ export default function ProductDetailPage() {
   useEffect(() => {
     fetchProduct();
   }, [fetchProduct]);
+
+  useEffect(() => {
+    if (!id || !user || !data?.product || user.id === data.product.sellerId) {
+      setMyOfferOnProduct(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const list = await listOffers({ asSeller: false });
+      if (cancelled) return;
+      const existing = list.find((o) => o.productId === id);
+      setMyOfferOnProduct(existing ? { id: existing.id, status: existing.status } : null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user?.id, data?.product?.sellerId]);
+
+  const handleSubmitOffer = async () => {
+    if (!id) return;
+    const price = parseFloat(offerPrice);
+    if (Number.isNaN(price) || price < 0) {
+      setActionToast({ show: true, message: "Please enter a valid price.", isError: true });
+      return;
+    }
+    setSubmittingOffer(true);
+    const result = await createOffer(id, price, offerMessage || undefined);
+    setSubmittingOffer(false);
+    if (result.success) {
+      setMyOfferOnProduct({ id: result.offer.id, status: result.offer.status });
+      setOfferPrice("");
+      setOfferMessage("");
+      setActionToast({ show: true, message: "Offer sent! Check Offers for updates." });
+    } else {
+      setActionToast({ show: true, message: result.error, isError: true });
+    }
+  };
+
+  const handleMessageSeller = async () => {
+    if (!id) return;
+    setStartingChat(true);
+    const result = await createConversationByProduct(id);
+    setStartingChat(false);
+    if (result.success) {
+      const convId = result.conversation.id;
+      if (convId) router.push(`/dashboard/chat/${convId}`);
+      else setActionToast({ show: true, message: "Chat started. Open Chat from the menu.", isError: false });
+    } else {
+      setActionToast({ show: true, message: result.error, isError: true });
+    }
+  };
 
   const handleLike = async () => {
     if (!id) return;
@@ -116,76 +184,145 @@ export default function ProductDetailPage() {
         onDismiss={() => setCartToast((p) => ({ ...p, show: false }))}
         duration={3500}
       />
-
-      <Link
-        href="/dashboard/browse"
-        className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-[var(--brand-white)] transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Browse
-      </Link>
+      <Toast
+        message={actionToast.message}
+        visible={actionToast.show}
+        onDismiss={() => setActionToast((p) => ({ ...p, show: false }))}
+        duration={actionToast.isError ? 5000 : 3500}
+        variant={actionToast.isError ? "error" : "success"}
+      />
 
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid gap-8 lg:grid-cols-2"
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        <div className="relative aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/10">
+        <Link
+          href="/dashboard/browse"
+          className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-[var(--brand-white)] transition-all duration-200 hover:gap-3"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Browse
+        </Link>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="grid gap-8 lg:gap-12 lg:grid-cols-2"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 shadow-[0_0_40px_-12px_rgba(59,130,246,0.15)]"
+        >
           {product.imageUrl ? (
-            <Image src={product.imageUrl} alt={product.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" priority />
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              fill
+              className="object-cover transition-transform duration-500 hover:scale-105"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-neutral-600">
               <ImageIcon className="w-24 h-24" />
             </div>
           )}
-        </div>
+        </motion.div>
 
         <div className="space-y-6">
           {product.category && (
-            <span className="inline-block rounded-full bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] px-3 py-1 text-sm font-medium">
+            <motion.span
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="inline-block rounded-full bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] px-3 py-1.5 text-sm font-medium border border-[var(--brand-blue)]/30"
+            >
               {product.category}
-            </span>
+            </motion.span>
           )}
-          <h1 className="text-3xl font-bold text-[var(--brand-white)]">{product.name}</h1>
-          <p className="text-2xl font-semibold text-[var(--brand-blue)]">${Number(product.price).toFixed(2)}</p>
+          <motion.h1
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-3xl lg:text-4xl font-bold text-[var(--brand-white)] tracking-tight"
+          >
+            {product.name}
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="text-3xl font-bold text-[var(--brand-blue)] bg-[var(--brand-blue)]/10 border border-[var(--brand-blue)]/30 rounded-2xl px-5 py-3 w-fit"
+          >
+            ${Number(product.price).toFixed(2)}
+          </motion.p>
           {product.description && (
-            <p className="text-neutral-400 leading-relaxed">{product.description}</p>
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-neutral-400 leading-relaxed"
+            >
+              {product.description}
+            </motion.p>
           )}
           {(product.tags?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="flex flex-wrap gap-2"
+            >
               {product.tags!.map((tag) => (
-                <span key={tag} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs text-neutral-300">
+                <span key={tag} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs text-neutral-300 border border-white/10">
                   {tag}
                 </span>
               ))}
-            </div>
+            </motion.div>
           )}
 
-          <div className="flex flex-wrap items-center gap-4 pt-2">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex flex-wrap items-center gap-4 pt-2"
+          >
             <div className="flex items-center gap-2 text-neutral-400">
               <Star className="w-5 h-5 text-amber-500" fill="currentColor" />
               <span className="text-sm">{averageRating > 0 ? averageRating.toFixed(1) : "—"} ({reviewCount} reviews)</span>
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={handleLike}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
                 liked
                   ? "border-[var(--brand-red)]/50 bg-[var(--brand-red)]/10 text-[var(--brand-red)]"
-                  : "border-white/10 hover:bg-white/5 text-neutral-400"
+                  : "border-white/10 hover:bg-white/5 text-neutral-400 hover:text-[var(--brand-white)]"
               }`}
             >
               <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
               {likeCount} likes
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <div className="flex rounded-xl border border-white/10 overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="flex flex-col sm:flex-row gap-3 pt-2"
+          >
+            <div className="flex rounded-xl border border-white/10 overflow-hidden bg-white/[0.04]">
               <button
                 type="button"
                 onClick={() => setCartQty((q) => Math.max(1, q - 1))}
-                className="px-4 py-3 bg-white/5 text-[var(--brand-white)] hover:bg-white/10"
+                className="px-4 py-3 text-[var(--brand-white)] hover:bg-white/10 transition-colors"
               >
                 −
               </button>
@@ -195,16 +332,18 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={() => setCartQty((q) => q + 1)}
-                className="px-4 py-3 bg-white/5 text-[var(--brand-white)] hover:bg-white/10"
+                className="px-4 py-3 text-[var(--brand-white)] hover:bg-white/10 transition-colors"
               >
                 +
               </button>
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={handleAddToCart}
               disabled={addingToCart}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-6 py-3.5 font-semibold text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-60 transition-colors"
+              whileHover={!addingToCart ? { scale: 1.02 } : {}}
+              whileTap={!addingToCart ? { scale: 0.98 } : {}}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-6 py-3.5 font-semibold text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-60 transition-colors shadow-lg shadow-[var(--brand-blue)]/20"
             >
               {addingToCart ? (
                 <>
@@ -217,16 +356,90 @@ export default function ProductDetailPage() {
                   Add to cart
                 </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
+
+          {user && user.id !== product.sellerId && (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="pt-2"
+              >
+                <motion.button
+                  type="button"
+                  onClick={handleMessageSeller}
+                  disabled={startingChat}
+                  whileHover={!startingChat ? { scale: 1.02 } : {}}
+                  whileTap={!startingChat ? { scale: 0.98 } : {}}
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--brand-blue)]/50 bg-[var(--brand-blue)]/10 px-5 py-3 text-sm font-medium text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/20 hover:border-[var(--brand-blue)]/70 disabled:opacity-50 transition-colors"
+                >
+                  {startingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                  {tChat("messageSeller")}
+                </motion.button>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+                className="rounded-2xl border border-[var(--brand-blue)]/30 bg-gradient-to-b from-[var(--brand-blue)]/[0.08] to-[var(--brand-blue)]/[0.02] p-6 shadow-[0_0_0_1px_rgba(59,130,246,0.1)]"
+              >
+                <h3 className="flex items-center gap-2 text-base font-semibold text-[var(--brand-white)] mb-4">
+                  <HandCoins className="w-5 h-5 text-[var(--brand-blue)]" />
+                  {t("makeOffer")}
+                </h3>
+                {myOfferOnProduct ? (
+                  <p className="text-sm text-neutral-300">
+                    {t("youHaveOffer")}{" "}
+                    <Link href="/dashboard/offers" className="text-[var(--brand-blue)] hover:underline font-medium">
+                      {t("myOffers")}
+                    </Link>
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder={t("proposedPrice")}
+                        value={offerPrice}
+                        onChange={(e) => setOfferPrice(e.target.value)}
+                        className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-[var(--brand-white)] w-full sm:w-40 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/50 transition-shadow"
+                      />
+                      <input
+                        type="text"
+                        placeholder={t("optionalMessage")}
+                        value={offerMessage}
+                        onChange={(e) => setOfferMessage(e.target.value)}
+                        className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/50 transition-shadow"
+                      />
+                      <motion.button
+                        type="button"
+                        onClick={handleSubmitOffer}
+                        disabled={submittingOffer || !offerPrice.trim()}
+                        whileHover={!(submittingOffer || !offerPrice.trim()) ? { scale: 1.02 } : {}}
+                        whileTap={!(submittingOffer || !offerPrice.trim()) ? { scale: 0.98 } : {}}
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-50 transition-colors"
+                      >
+                        {submittingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        {t("makeOffer")}
+                      </motion.button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </>
+          )}
         </div>
       </motion.div>
 
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
       >
         <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)] mb-6">
           <MessageSquare className="w-5 h-5 text-[var(--brand-blue)]" />

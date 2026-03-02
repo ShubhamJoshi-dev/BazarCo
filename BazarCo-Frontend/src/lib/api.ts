@@ -681,6 +681,134 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
   }
 }
 
+// Offers (negotiation)
+export interface OfferProduct {
+  id: string;
+  name?: string;
+  price?: number;
+  imageUrl?: string;
+}
+
+export interface OfferParty {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface Offer {
+  id: string;
+  productId: string;
+  product: OfferProduct | null;
+  buyerId: string;
+  buyer: OfferParty | null;
+  sellerId: string;
+  seller: OfferParty | null;
+  proposedPrice: number;
+  status: "pending" | "accepted" | "rejected" | "countered";
+  buyerMessage: string | null;
+  sellerMessage: string | null;
+  counterPrice: number | null;
+  counterMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createOffer(productId: string, proposedPrice: number, message?: string): Promise<{ success: true; offer: Offer } | { success: false; error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; message?: string; offer?: Offer }>("/offers", {
+      productId,
+      proposedPrice,
+      message: message ?? undefined,
+    });
+    if (data.status === "success" && data.offer) return { success: true, offer: data.offer };
+    return { success: false, error: (data as { message?: string }).message ?? "Offer failed" };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data && typeof (err.response.data as { message?: string }).message === "string") {
+      return { success: false, error: (err.response.data as { message: string }).message };
+    }
+    return { success: false, error: "Could not submit offer. Try again." };
+  }
+}
+
+export async function listOffers(options?: { asSeller?: boolean; status?: string }): Promise<Offer[]> {
+  try {
+    const params: Record<string, string> = {};
+    if (options?.asSeller) params.as = "seller";
+    if (options?.status) params.status = options.status;
+    const { data } = await api.get<{ status: string; offers?: Offer[] }>("/offers", { params });
+    if (data.status === "success") return data.offers ?? [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getOfferById(id: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.get<{ status: string; offer?: Offer }>(`/offers/${id}`);
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function acceptOffer(id: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.patch<{ status: string; offer?: Offer }>(`/offers/${id}/accept`);
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function rejectOffer(id: string, message?: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.patch<{ status: string; offer?: Offer }>(`/offers/${id}/reject`, { message });
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function counterOffer(id: string, counterPrice: number, message?: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.patch<{ status: string; offer?: Offer }>(`/offers/${id}/counter`, {
+      counterPrice,
+      message: message ?? undefined,
+    });
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function acceptCounter(id: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.patch<{ status: string; offer?: Offer }>(`/offers/${id}/accept-counter`);
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function respondToCounter(id: string, proposedPrice: number, message?: string): Promise<Offer | null> {
+  try {
+    const { data } = await api.patch<{ status: string; offer?: Offer }>(`/offers/${id}/respond`, {
+      proposedPrice,
+      message: message ?? undefined,
+    });
+    if (data.status === "success" && data.offer) return data.offer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // Seller report (analytics)
 export interface SellerReportProduct {
   id: string;
@@ -754,5 +882,121 @@ export async function sellerReport(): Promise<SellerReport | null> {
     return null;
   } catch {
     return null;
+  }
+}
+
+// Chat
+export interface ChatConversationParty {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface ChatConversationOrder {
+  id: string;
+  total?: number;
+  status?: string;
+}
+
+export interface ChatConversationProduct {
+  id: string;
+  name?: string;
+  price?: number;
+  imageUrl?: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  buyer: ChatConversationParty | null;
+  seller: ChatConversationParty | null;
+  orderId?: string | null;
+  order: ChatConversationOrder | null;
+  productId?: string | null;
+  product: ChatConversationProduct | null;
+  updatedAt?: string;
+}
+
+export interface ChatMessage {
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  role: "buyer" | "seller";
+  content: string;
+  messageType: "text" | "image" | "file";
+  status: "sent" | "delivered" | "seen";
+  isUnsent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listConversations(): Promise<ChatConversation[]> {
+  try {
+    const { data } = await api.get<{ status: string; conversations?: ChatConversation[] }>("/chat/conversations");
+    if (data.status === "success") return data.conversations ?? [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getConversation(id: string): Promise<ChatConversation | null> {
+  try {
+    const { data } = await api.get<{ status: string; conversation?: ChatConversation }>(`/chat/conversations/${id}`);
+    if (data.status === "success" && data.conversation) return data.conversation;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createConversationByOrder(orderId: string): Promise<ChatConversation | null> {
+  try {
+    const { data } = await api.post<{ status: string; conversation?: ChatConversation }>("/chat/conversations", { orderId });
+    if (data.status === "success" && data.conversation) return data.conversation;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createConversationByProduct(productId: string): Promise<{ success: true; conversation: ChatConversation } | { success: false; error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; message?: string; conversation?: ChatConversation }>("/chat/conversations", { productId });
+    if (data.status === "success" && data.conversation) return { success: true, conversation: data.conversation };
+    return { success: false, error: (data as { message?: string }).message ?? "Could not start chat" };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data && typeof (err.response.data as { message?: string }).message === "string") {
+      return { success: false, error: (err.response.data as { message: string }).message };
+    }
+    return { success: false, error: "Could not start chat. Try again." };
+  }
+}
+
+export async function getConversationMessages(
+  conversationId: string,
+  options?: { limit?: number; before?: string; beforeMessageId?: string }
+): Promise<ChatMessage[]> {
+  try {
+    const params: Record<string, string> = {};
+    if (options?.limit != null) params.limit = String(options.limit);
+    if (options?.before) params.before = options.before;
+    if (options?.beforeMessageId) params.beforeMessageId = options.beforeMessageId;
+    const { data } = await api.get<{ status: string; messages?: ChatMessage[] }>(`/chat/conversations/${conversationId}/messages`, { params });
+    if (data.status === "success") return data.messages ?? [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function unsendMessage(messageId: string): Promise<boolean> {
+  try {
+    const { data } = await api.patch<{ status: string }>(`/chat/messages/${messageId}/unsend`);
+    return data.status === "success";
+  } catch {
+    return false;
   }
 }

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
+import { ChatSocketProvider } from "@/contexts/ChatSocketContext";
 import { BuyerDashboardLayout } from "@/components/dashboard/BuyerDashboardLayout";
 import { SellerDashboardLayout } from "@/components/dashboard/SellerDashboardLayout";
 
@@ -37,8 +38,16 @@ export default function DashboardLayout({
   }
 
   if (user.role === "seller") {
-    return <SellerDashboardLayout>{children}</SellerDashboardLayout>;
+    return (
+      <ChatSocketProvider>
+        <SellerDashboardLayout>{children}</SellerDashboardLayout>
+      </ChatSocketProvider>
+    );
   }
 
-  return <BuyerDashboardLayout>{children}</BuyerDashboardLayout>;
+  return (
+    <ChatSocketProvider>
+      <BuyerDashboardLayout>{children}</BuyerDashboardLayout>
+    </ChatSocketProvider>
+  );
 }

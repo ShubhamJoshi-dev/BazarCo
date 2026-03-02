@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, MapPin, UserCircle, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, MessageCircle, UserCircle, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOrderById, updateOrderStatus, type Order } from "@/lib/api";
+import { getOrderById, updateOrderStatus, createConversationByOrder, type Order } from "@/lib/api";
 
 const statusLabelKeys: Record<string, string> = {
   pending: "statusPending",
@@ -47,9 +47,11 @@ export default function OrderDetailPage() {
   const { user } = useAuth();
   const t = useTranslations("orders");
   const isSeller = user?.role === "seller";
+  const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -68,6 +70,14 @@ export default function OrderDetailPage() {
     const ok = await updateOrderStatus(order.id, newStatus);
     setUpdating(false);
     if (ok) setOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
+  };
+
+  const handleMessage = async () => {
+    if (!order?.id) return;
+    setStartingChat(true);
+    const conv = await createConversationByOrder(order.id);
+    setStartingChat(false);
+    if (conv) router.push(`/dashboard/chat/${conv.id}`);
   };
 
   if (loading) {
@@ -117,6 +127,18 @@ export default function OrderDetailPage() {
             )}
           </div>
           <StatusBadge status={order.status} label={t(statusLabelKeys[order.status] ?? "statusPending")} />
+        </div>
+
+        <div className="px-6 py-3 bg-white/[0.02] border-b border-white/10">
+          <button
+            type="button"
+            onClick={handleMessage}
+            disabled={startingChat}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand-blue)]/40 bg-[var(--brand-blue)]/10 px-4 py-2 text-sm font-medium text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/20 disabled:opacity-50"
+          >
+            {startingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+            {isSeller ? t("messageBuyer") : t("messageSeller")}
+          </button>
         </div>
 
         {order.rider && (
