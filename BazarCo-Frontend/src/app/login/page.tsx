@@ -95,13 +95,6 @@ export default function LoginPage() {
           {loading ? "Signing in..." : "Sign in"}
         </motion.button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-neutral-400">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-[var(--brand-blue)] font-medium hover:underline">
-          Sign up
-        </Link>
-      </p>
     </AuthLayout>
   );
 }
