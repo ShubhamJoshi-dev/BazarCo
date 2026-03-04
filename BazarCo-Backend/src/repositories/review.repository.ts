@@ -29,6 +29,9 @@ export async function updateReview(productId: string, userId: string, data: { ra
 export async function countByProduct(productId: string): Promise<number> {
   return Review.countDocuments({ productId });
 }
+export async function ReviewfindById(id: string | Types.ObjectId) {
+    return Review.findById(id);
+  }
 
 export async function getAverageRating(productId: string): Promise<number | null> {
   const mongoose = await import("mongoose");

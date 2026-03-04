@@ -123,7 +123,7 @@ export async function createShopifyProduct(
     })),
     financialStatus: "PAID",
   };
-
+  
   try {
     const { data: json } = await axios.post(
       url,
