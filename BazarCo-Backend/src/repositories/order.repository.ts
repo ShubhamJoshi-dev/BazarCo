@@ -28,11 +28,36 @@ export async function createOrder(data: {
   shippingAddress?: ShippingAddressInput;
   riderId?: string | Types.ObjectId;
   urgent?: boolean;
+  
 }) {
   const doc = await Order.create(data);
   return doc.toObject();
 }
+export async function update(
+  orderId: string | Types.ObjectId,
+  data: Partial<{
+    buyerId: string | Types.ObjectId;
+    sellerId: string | Types.ObjectId;
+    items: OrderItemInput[];
+    total: number;
+    status: OrderStatus;
+    stripeSessionId?: string;
+    shippingAddress?: ShippingAddressInput;
+    riderId?: string | Types.ObjectId;
+    urgent?: boolean;
+    shopifyOrderId?: string;
+  }>
+) {
+  const updated = await Order.findByIdAndUpdate(
+    orderId,
+    { $set: data },
+    { new: true } // return the updated document
+  )
+    .populate("riderId", "name phone userId")
+    .lean();
 
+  return updated ?? null;
+}
 export async function findById(id: string) {
   const doc = await Order.findById(id).populate("riderId", "name phone userId").lean();
   return doc ?? null;
@@ -115,4 +140,15 @@ export async function getSellerOrderStats(sellerId: string): Promise<{
   const soldCount = productsSold.reduce((sum, i) => sum + i.quantity, 0);
 
   return { completed, inProgress, productsSold, soldCount };
+}
+export interface UpdateOrderInput {
+  orderId: string;
+  status?: string; // e.g., "PAID", "SHIPPED", "CANCELLED"
+  items?: Array<{
+    productId: string;
+    quantity?: number;
+    price?: number;
+  }>;
+  total?: number;
+  shopifyOrderId?: string;
 }

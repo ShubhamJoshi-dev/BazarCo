@@ -45,6 +45,7 @@ export interface AlgoliaProductRecord {
   tags?: string[];
   createdBy: string;
   shopifyProductId?: string;
+  shopifyVariantId?: string;
   status: string;
 }
 

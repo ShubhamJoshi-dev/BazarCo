@@ -103,24 +103,33 @@ export async function createProduct(req: ReqWithUser, res: Response): Promise<vo
   }
 
   let shopifyProductId: string | undefined;
-  if (isShopifyConfigured()) {
-    const shopify = await createShopifyProduct({
-      title: name,
-      descriptionHtml: description ? `<p>${description.replace(/</g, "&lt;").replace(/[>]/g, "&gt;")}</p>` : "",
-    });
-    if (shopify?.id) shopifyProductId = shopify.id;
-  }
+let shopifyVariantId: string | undefined;
 
-  const product = await productRepo.createProduct({
-    name,
-    description: description || undefined,
-    price,
-    imageUrl,
-    categoryId: categoryId || undefined,
-    tagIds: tagIds.length ? tagIds : undefined,
-    shopifyProductId,
-    sellerId: user.id,
+if (isShopifyConfigured()) {
+  const shopify = await createShopifyProduct({
+    title: name,
+    descriptionHtml: description
+      ? `<p>${description.replace(/</g, "&lt;").replace(/[>]/g, "&gt;")}</p>`
+      : "",
   });
+
+  if (shopify) {
+    shopifyProductId = shopify.productId;
+    shopifyVariantId = shopify.variantId; // 🔹 SAVE VARIANT ID
+  }
+}
+
+const product = await productRepo.createProduct({
+  name,
+  description: description || undefined,
+  price,
+  imageUrl,
+  categoryId: categoryId || undefined,
+  tagIds: tagIds.length ? tagIds : undefined,
+  shopifyProductId,
+  shopifyVariantId, // 🔹 NEW FIELD
+  sellerId: user.id,
+});
 
   const productDoc = product as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId };
   if (isAlgoliaConfigured()) {
@@ -134,6 +143,7 @@ export async function createProduct(req: ReqWithUser, res: Response): Promise<vo
       tags: tagNames.length ? tagNames : undefined,
       createdBy: productDoc.sellerId.toString(),
       shopifyProductId,
+      shopifyVariantId,
       status: (productDoc.status as string) ?? "active",
     });
   }

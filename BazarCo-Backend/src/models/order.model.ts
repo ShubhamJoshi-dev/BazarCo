@@ -40,6 +40,7 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: shippingAddressSchema,
     riderId: { type: mongoose.Schema.Types.ObjectId, ref: "Rider" },
     urgent: { type: Boolean, default: false },
+    shopifyOrderId:{type:String}
   },
   { timestamps: true, collection: "orders" }
 );
