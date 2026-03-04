@@ -10,6 +10,7 @@ export async function createProduct(data: {
   categoryId?: Types.ObjectId | string;
   tagIds?: (Types.ObjectId | string)[];
   shopifyProductId?: string;
+  shopifyVariantId?: string;
   sellerId: string | Types.ObjectId;
 }) {
   const doc = await Product.create(data);
