@@ -7,7 +7,7 @@ import * as cartRepo from "../repositories/cart.repository";
 import * as productRepo from "../repositories/product.repository";
 import * as orderRepo from "../repositories/order.repository";
 import * as riderRepo from "../repositories/rider.repository";
-import { createShopifyDraftOrder } from "../services/shopify.service";
+import { createShopifyDraftOrder, completeShopifyDraftOrder } from "../services/shopify.service";
 import { emailHelper } from "../helpers/email.helper";
 
 type ReqWithUser = Request & { user?: { id: string } };
@@ -247,7 +247,7 @@ export async function confirmCheckoutSuccess(req: ReqWithUser, res: Response): P
       shippingAddress: o.shippingAddress,
     });
     try {
-      await createShopifyDraftOrder({
+      const { draftOrderId } = await createShopifyDraftOrder({
         lineItems: sellerItems.map((i) => ({ title: i.productName, quantity: i.quantity, price: i.price })),
         note: `BazarCo order ${orderId}`,
         shippingAddress: shippingAddress
@@ -260,6 +260,7 @@ export async function confirmCheckoutSuccess(req: ReqWithUser, res: Response): P
             }
           : undefined,
       });
+      if (draftOrderId) await completeShopifyDraftOrder(draftOrderId);
     } catch {
       // non-fatal
     }
