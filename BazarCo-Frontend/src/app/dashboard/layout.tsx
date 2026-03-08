@@ -42,7 +42,6 @@ export default function DashboardLayout({
     return (
       <ChatSocketProvider>
         <SellerDashboardLayout>{children}</SellerDashboardLayout>
-        <BazarCoBot />
       </ChatSocketProvider>
     );
   }

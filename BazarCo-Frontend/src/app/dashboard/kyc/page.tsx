@@ -44,12 +44,26 @@ export default function KycPage() {
   }, [fetchKyc]);
 
   const hasShownVerifiedToast = useRef(false);
+  const hasShownInvalidIdToast = useRef(false);
   useEffect(() => {
     if (searchParams.get("verified") !== "1" || hasShownVerifiedToast.current) return;
     hasShownVerifiedToast.current = true;
     toast.success("KYC verified. The seller can now add products.");
     window.history.replaceState({}, "", "/dashboard/kyc");
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!kyc?.documents?.length || hasShownInvalidIdToast.current) return;
+    const invalidNational = kyc.documents.find(
+      (d) =>
+        d.documentType === "national_card" &&
+        (d.extractionStatus === "invalid" || (d.extractionStatus === "success" && d.isValidNationalId === false))
+    );
+    if (invalidNational) {
+      hasShownInvalidIdToast.current = true;
+      toast.error("Please upload a valid national identity card (राष्ट्रिय परिचयपत्र). This image does not appear to be a Nepal national ID.");
+    }
+  }, [kyc?.documents, toast]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -75,7 +89,7 @@ export default function KycPage() {
     if (result.success) {
       toast.success(
         documentType === "national_card"
-          ? "Document uploaded. It is being processed—refresh in a moment to see extracted details."
+          ? "Document uploaded. Extracted details are shown below."
           : (result.message ?? "Document uploaded. Admin will verify your KYC.")
       );
       setSelectedFile(null);

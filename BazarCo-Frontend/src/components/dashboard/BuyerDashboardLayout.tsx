@@ -22,7 +22,7 @@ const navItems: { href: string; match?: (p: string) => boolean; activeClass: str
   { href: "/dashboard/chat", match: (p) => p?.startsWith("/dashboard/chat"), activeClass: "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border-[var(--brand-blue)]/40" },
 ];
 
-const navKeys: (keyof IntlMessages["nav"])[] = ["dashboard", "browse", "favourites", "cart", "orders", "offers", "chat"];
+const navKeys = ["dashboard", "browse", "favourites", "cart", "orders", "offers", "chat"] as const;
 
 function getInitial(name?: string | null, email?: string | null) {
   if (name?.trim()) return name.trim().slice(0, 2).toUpperCase();

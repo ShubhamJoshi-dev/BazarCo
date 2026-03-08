@@ -9,7 +9,7 @@ import { extractNepalNationalId } from "../services/ocr.service";
 import * as documentRepo from "../repositories/document.repository";
 import * as kycRepo from "../repositories/kycVerification.repository";
 import * as userRepo from "../repositories/user.repository";
-import type { DocumentType } from "../models/document.model";
+import type { DocumentType, NepalIdExtractedData } from "../models/document.model";
 
 type AuthUser = { id: string; email: string; name?: string; role: string };
 type ReqWithUser = { user?: AuthUser; file?: Express.Multer.File; body: Record<string, unknown> };
@@ -48,6 +48,27 @@ export async function uploadKycDocument(
       return;
     }
 
+    // For national ID, validate with OCR first; reject if not a valid Nepal national ID (e.g. photo/selfie).
+    let nationalIdExtraction: { extractedData: NepalIdExtractedData; isValidNationalId: boolean; extractionStatus: "success" | "invalid" } | null = null;
+    if (documentType === "national_card" && file.buffer) {
+      try {
+        const extraction = await extractNepalNationalId(Buffer.from(file.buffer));
+        if (!extraction.isValidNationalId || extraction.extractionStatus === "invalid") {
+          errorResponse(
+            res,
+            400,
+            "Please upload a valid national identity card (राष्ट्रिय परिचयपत्र). This image does not appear to be a Nepal national ID."
+          );
+          return;
+        }
+        nationalIdExtraction = extraction;
+      } catch (ocrErr) {
+        logger.error("KYC OCR validation failed", ocrErr);
+        errorResponse(res, 500, "Document validation failed. Please try again.");
+        return;
+      }
+    }
+
     const result = await uploadDocument(file.buffer);
     if (!result) {
       errorResponse(res, 500, "Failed to upload document to storage. Check Cloudinary configuration.");
@@ -62,26 +83,12 @@ export async function uploadKycDocument(
   });
   const docId = (doc as { _id: Types.ObjectId })._id;
 
-  // Run OCR in background so upload returns immediately (avoids timeout). User can refresh to see extracted data.
-  if (documentType === "national_card" && file.buffer) {
-    const buffer = Buffer.from(file.buffer);
+  if (documentType === "national_card" && nationalIdExtraction) {
     const docIdStr = docId.toString();
-    const userIdStr = user.id;
-    setImmediate(async () => {
-      try {
-        const { extractedData, isValidNationalId, extractionStatus } = await extractNepalNationalId(buffer);
-        await documentRepo.updateExtraction(docIdStr, userIdStr, {
-          extractedData,
-          isValidNationalId,
-          extractionStatus,
-        });
-      } catch (ocrErr) {
-        logger.error("KYC OCR extraction failed", ocrErr);
-        await documentRepo.updateExtraction(docIdStr, userIdStr, {
-          extractionStatus: "failed",
-          extractionError: ocrErr instanceof Error ? ocrErr.message : "OCR failed",
-        });
-      }
+    await documentRepo.updateExtraction(docIdStr, user.id, {
+      extractedData: nationalIdExtraction.extractedData,
+      isValidNationalId: nationalIdExtraction.isValidNationalId,
+      extractionStatus: nationalIdExtraction.extractionStatus,
     });
   }
 
@@ -166,7 +173,13 @@ export async function getKycStatus(req: ReqWithUser, res: Response): Promise<voi
   const documents = await documentRepo.findByUserId(user.id);
 
   const dbUser = await userRepo.findById(user.id);
-  const kycVerified = (dbUser as { kycVerified?: boolean })?.kycVerified ?? false;
+  const userKycVerified = (dbUser as { kycVerified?: boolean })?.kycVerified ?? false;
+  const docList = documents as Array<{ documentType?: string; isValidNationalId?: boolean }>;
+  const hasNationalCard = docList.some((d) => d.documentType === "national_card");
+  const hasValidNationalId = docList.some((d) => d.documentType === "national_card" && d.isValidNationalId === true);
+  // Show verified only when there are documents, admin verified, and any national ID doc is OCR-valid
+  const kycVerified =
+    documents.length > 0 && userKycVerified && (!hasNationalCard || hasValidNationalId);
 
   successResponse(res, 200, "KYC status", {
     kycVerified,
@@ -209,5 +222,12 @@ export async function deleteKycDocument(req: ReqWithUser, res: Response): Promis
   if (publicId) await deleteByPublicId(publicId);
   await kycRepo.removeDocumentId(user.id, documentId);
   await documentRepo.deleteById(documentId, user.id);
+
+  // If no documents remain, clear verified status so UI does not show "Verified"
+  const remaining = await documentRepo.findByUserId(user.id);
+  if (remaining.length === 0) {
+    await userRepo.setKycVerified(user.id, false);
+  }
+
   successResponse(res, 200, "Document removed");
 }

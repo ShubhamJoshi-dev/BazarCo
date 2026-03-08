@@ -224,7 +224,7 @@ export default function AnalyticsPage() {
                   borderRadius: "12px",
                 }}
                 labelStyle={{ color: "var(--brand-white)" }}
-                formatter={(value: number) => [value, "Value"]}
+                formatter={(value: number | undefined) => [value ?? 0, "Value"]}
               />
               <Area
                 type="monotone"
