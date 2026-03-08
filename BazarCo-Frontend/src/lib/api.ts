@@ -809,6 +809,93 @@ export async function respondToCounter(id: string, proposedPrice: number, messag
   }
 }
 
+// KYC (seller only)
+export type KycDocumentType = "national_card" | "company_card";
+
+/** Nepal national ID extracted fields (Nepali + English keys) */
+export interface NepalIdExtractedData {
+  नाम?: string;
+  name?: string;
+  जन्म_मिति?: string;
+  dateOfBirth?: string;
+  नागरिकता_नम्बर?: string;
+  citizenshipNumber?: string;
+  जिल्ला?: string;
+  district?: string;
+  पिताको_नाम?: string;
+  fatherName?: string;
+  आमाको_नाम?: string;
+  motherName?: string;
+  ठेगाना?: string;
+  address?: string;
+  लिङ्ग?: string;
+  gender?: string;
+  rawText?: string;
+}
+
+export interface KycDocument {
+  id: string;
+  documentType: KycDocumentType;
+  fileUrl: string;
+  uploadedAt?: string;
+  extractedData?: NepalIdExtractedData | null;
+  isValidNationalId?: boolean | null;
+  extractionStatus?: "pending" | "success" | "failed" | "invalid";
+  extractionError?: string | null;
+}
+
+export interface KycStatusResponse {
+  kycVerified: boolean;
+  status: "pending" | "verified" | "rejected";
+  documents: KycDocument[];
+}
+
+export async function getKycStatus(): Promise<KycStatusResponse | null> {
+  try {
+    const { data } = await api.get<{ kycVerified?: boolean; status: KycStatusResponse["status"]; documents?: KycDocument[] }>("/kyc/status");
+    return {
+      kycVerified: data.kycVerified ?? false,
+      status: data.status ?? "pending",
+      documents: data.documents ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadKycDocument(documentType: KycDocumentType, file: File): Promise<{ success: boolean; message?: string }> {
+  try {
+    const form = new FormData();
+    form.append("documentType", documentType);
+    form.append("document", file);
+    const { data } = await api.post<{ message?: string; status?: string }>("/kyc/upload", form);
+    return { success: true, message: data?.message ?? "Document uploaded. Admin will verify your KYC." };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; error?: string };
+      const msg = body.message ?? body.error;
+      if (msg) return { success: false, message: String(msg) };
+    }
+    if (axios.isAxiosError(err) && err.message) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Upload failed. Check your connection and try again." };
+  }
+}
+
+export async function deleteKycDocument(documentId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await api.delete(`/kyc/documents/${encodeURIComponent(documentId)}`);
+    return { success: true };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      return { success: false, message: body.message ?? "Failed to remove document" };
+    }
+    return { success: false, message: "Failed to remove document" };
+  }
+}
+
 // Seller report (analytics)
 export interface SellerReportProduct {
   id: string;
@@ -932,13 +1019,13 @@ export interface ChatMessage {
   updatedAt: string;
 }
 
-export async function listConversations(): Promise<ChatConversation[]> {
+export async function listConversations(): Promise<ChatConversation[] | null> {
   try {
     const { data } = await api.get<{ status: string; conversations?: ChatConversation[] }>("/chat/conversations");
     if (data.status === "success") return data.conversations ?? [];
     return [];
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -970,6 +1057,24 @@ export async function createConversationByProduct(productId: string): Promise<{ 
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data && typeof (err.response.data as { message?: string }).message === "string") {
       return { success: false, error: (err.response.data as { message: string }).message };
+    }
+    return { success: false, error: "Could not start chat. Try again." };
+  }
+}
+
+export async function createConversationByOffer(offerId: string): Promise<{ success: true; conversation: ChatConversation } | { success: false; error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; message?: string; conversation?: ChatConversation }>("/chat/conversations", { offerId });
+    if (data.status === "success" && data.conversation) return { success: true, conversation: data.conversation };
+    return { success: false, error: (data as { message?: string }).message ?? "Could not start chat" };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; error?: string };
+      const msg = body.message ?? body.error;
+      if (typeof msg === "string" && msg) return { success: false, error: msg };
+    }
+    if (axios.isAxiosError(err) && err.code === "ECONNREFUSED") {
+      return { success: false, error: "Cannot reach server. Check your connection and that the backend is running." };
     }
     return { success: false, error: "Could not start chat. Try again." };
   }

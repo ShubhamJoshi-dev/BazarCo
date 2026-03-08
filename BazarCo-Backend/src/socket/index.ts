@@ -11,6 +11,15 @@ import { logger } from "../lib/logger";
 
 const CONVERSATION_ROOM_PREFIX = "conversation:";
 
+function toUserId(ref: unknown): string {
+  if (ref == null) return "";
+  if (typeof ref === "string") return ref.trim();
+  const obj = ref as { _id?: unknown };
+  if (obj._id != null && typeof (obj._id as { toString?: () => string }).toString === "function") return (obj._id as { toString: () => string }).toString();
+  if (typeof (ref as { toString?: () => string }).toString === "function") return (ref as { toString: () => string }).toString();
+  return "";
+}
+
 export function createSocketServer(httpServer: HttpServer): Server {
   const corsOrigins = env.CORS_ORIGIN ? env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean) : [];
   const io = new Server(httpServer, {
@@ -103,9 +112,8 @@ export function createSocketServer(httpServer: HttpServer): Server {
         ack?.("Not allowed to send in this conversation", undefined);
         return;
       }
-      const c = conv as { buyerId: { toString(): string }; sellerId: { toString(): string } };
-      const buyerId = c.buyerId?.toString?.() ?? "";
-      const sellerId = c.sellerId?.toString?.() ?? "";
+      const buyerId = toUserId((conv as { buyerId?: unknown }).buyerId);
+      const sellerId = toUserId((conv as { sellerId?: unknown }).sellerId);
       const isBuyer = userId === buyerId;
       const receiverId = isBuyer ? sellerId : buyerId;
       const msgRole = isBuyer ? ("buyer" as const) : ("seller" as const);

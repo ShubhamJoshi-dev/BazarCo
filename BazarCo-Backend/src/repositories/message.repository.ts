@@ -48,6 +48,28 @@ export async function getByConversationPaginated(
   return docs.reverse();
 }
 
+/** Messages from any of the given conversation ids (merged history for one user pair). */
+export async function getByConversationIdsPaginated(
+  conversationIds: string[],
+  options: { limit: number; before?: Date; beforeMessageId?: string }
+) {
+  if (conversationIds.length === 0) return [];
+  const query: Record<string, unknown> = { conversationId: { $in: conversationIds } };
+  if (options.before || options.beforeMessageId) {
+    if (options.beforeMessageId) {
+      const beforeMsg = await Message.findOne({ conversationId: { $in: conversationIds }, messageId: options.beforeMessageId }).lean();
+      if (beforeMsg) query.createdAt = { $lt: beforeMsg.createdAt };
+    } else if (options.before) {
+      query.createdAt = { $lt: options.before };
+    }
+  }
+  const docs = await Message.find(query)
+    .sort({ createdAt: -1 })
+    .limit(options.limit)
+    .lean();
+  return docs.reverse();
+}
+
 export async function markDelivered(conversationId: string, receiverId: string) {
   await Message.updateMany(
     { conversationId, receiverId, status: "sent" },

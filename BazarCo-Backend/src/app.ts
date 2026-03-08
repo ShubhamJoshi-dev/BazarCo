@@ -62,7 +62,8 @@ export function createApp(): Express {
     res.json(openApiSpec);
   });
 
-  app.use(router);
+  const apiPath = env.API_PREFIX ? (env.API_PREFIX.startsWith("/") ? env.API_PREFIX : "/" + env.API_PREFIX) : "/";
+  app.use(apiPath, router);
 
   app.get("/", (_req: Request, res: Response) => {
     res.json({

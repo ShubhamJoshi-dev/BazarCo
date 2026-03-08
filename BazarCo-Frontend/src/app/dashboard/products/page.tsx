@@ -22,6 +22,7 @@ import {
   productDelete,
   productArchive,
   productUnarchive,
+  getKycStatus,
   categoriesList,
   categoryCreate,
   tagsList,
@@ -45,6 +46,7 @@ export default function ProductsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
 
   const isSeller = user?.role === "seller";
 
@@ -60,6 +62,11 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!isSeller) return;
+    getKycStatus().then((kyc) => setKycVerified(kyc?.kycVerified ?? false));
+  }, [isSeller]);
 
   const handleArchive = async (p: Product) => {
     if (p.status === "archived") {
@@ -117,6 +124,19 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
+      {kycVerified === false && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-[var(--brand-white)]">
+            You need to complete <strong>KYC verification</strong> before adding products. Upload your national ID or company card and wait for admin approval.
+          </p>
+          <Link
+            href="/dashboard/kyc"
+            className="shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
+          >
+            Go to KYC
+          </Link>
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-[var(--brand-white)]">Products</h1>
         <div className="flex items-center gap-2">
@@ -139,7 +159,8 @@ export default function ProductsPage() {
           <button
             type="button"
             onClick={() => setModal("add")}
-            className="flex items-center gap-2 rounded-xl bg-[var(--brand-red)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-red)]/90 transition-colors"
+            disabled={kycVerified === false}
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-red)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-red)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add product
@@ -160,9 +181,9 @@ export default function ProductsPage() {
           <Package className="mx-auto w-12 h-12 text-neutral-500 mb-4" />
           <p className="text-[var(--brand-white)] font-medium mb-1">No products yet</p>
           <p className="text-sm text-neutral-400 mb-6">
-            {filter !== "all" ? `No ${filter} products.` : "Add your first product to get started."}
+            {filter !== "all" ? `No ${filter} products.` : kycVerified === false ? "Complete KYC to add products." : "Add your first product to get started."}
           </p>
-          {filter === "all" && (
+          {filter === "all" && kycVerified !== false && (
             <button
               type="button"
               onClick={() => setModal("add")}
@@ -170,6 +191,11 @@ export default function ProductsPage() {
             >
               Add product
             </button>
+          )}
+          {filter === "all" && kycVerified === false && (
+            <Link href="/dashboard/kyc" className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
+              Complete KYC
+            </Link>
           )}
         </motion.div>
       ) : (

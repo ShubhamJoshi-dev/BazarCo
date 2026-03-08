@@ -68,6 +68,19 @@ export async function createProduct(req: ReqWithUser, res: Response): Promise<vo
     return;
   }
 
+  if (user.role === "seller") {
+    const dbUser = await userRepo.findById(user.id);
+    const kycVerified = (dbUser as { kycVerified?: boolean })?.kycVerified;
+    if (!kycVerified) {
+      errorResponse(
+        res,
+        403,
+        "KYC verification required before adding products. Please upload your national card or company card in the KYC section and wait for admin verification."
+      );
+      return;
+    }
+  }
+
   const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
   const description = typeof req.body.description === "string" ? req.body.description.trim() : "";
   const price = Number(req.body.price);
