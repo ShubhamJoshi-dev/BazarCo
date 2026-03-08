@@ -59,15 +59,16 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Search bar — modern, no heavy border */}
+      {/* Search bar */}
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-xl"
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-20 bg-[var(--background)]/90 backdrop-blur-xl border-b border-white/5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2)]"
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-[var(--brand-blue)] transition-colors pointer-events-none z-10" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-[var(--brand-blue)] transition-colors duration-200 pointer-events-none z-10" />
             <input
               type="search"
               value={query}
@@ -76,19 +77,26 @@ export default function BrowsePage() {
                 setPage(0);
               }}
               placeholder="Search products by name or description…"
-              className="w-full rounded-2xl bg-white/[0.06] pl-12 pr-12 py-3.5 text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:bg-white/[0.08] focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-all duration-200 border border-transparent"
+              className="w-full rounded-2xl bg-white/[0.06] pl-12 pr-12 py-3.5 text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:bg-white/[0.09] focus:shadow-[0_0_0_1px_rgba(100,181,246,0.4),0_0_20px_-4px_rgba(100,181,246,0.15)] transition-all duration-300 border border-transparent focus:border-[var(--brand-blue)]/30"
               aria-label="Search products"
             />
-            {query.length > 0 && (
-              <button
-                type="button"
-                onClick={() => { setQuery(""); setPage(0); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/10 transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+            <AnimatePresence>
+              {query.length > 0 && (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  onClick={() => { setQuery(""); setPage(0); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/10 transition-colors"
+                  aria-label="Clear search"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <X className="w-4 h-4" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
@@ -96,58 +104,70 @@ export default function BrowsePage() {
       <div className="max-w-6xl mx-auto px-4 py-6 flex gap-8">
         {/* Filters — left sidebar */}
         <motion.aside
-          initial={{ opacity: 0, x: -12 }}
+          initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.05 }}
+          transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className="w-56 shrink-0 hidden sm:block"
         >
-          <div className="sticky top-24 rounded-2xl bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+          <div className="sticky top-24 rounded-2xl bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-all duration-200 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_24px_-8px_rgba(0,0,0,0.15)]">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--brand-white)] mb-3">
               <Filter className="w-4 h-4 text-[var(--brand-blue)]" />
               Filters
             </h3>
             <p className="text-xs text-neutral-500 mb-2">Category</p>
             <div className="flex flex-col gap-1 mb-4">
-              <button
+              <motion.button
                 type="button"
                 onClick={() => { setCategoryId(null); setPage(0); }}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
                 className={`text-left rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   categoryId === null ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border border-[var(--brand-blue)]/40" : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
                 }`}
               >
                 All
-              </button>
-              {categories.map((c) => (
-                <button
+              </motion.button>
+              {categories.map((c, i) => (
+                <motion.button
                   key={c.id}
                   type="button"
                   onClick={() => { setCategoryId(c.id); setPage(0); }}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + i * 0.03 }}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
                   className={`text-left rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     categoryId === c.id ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border border-[var(--brand-blue)]/40" : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
                   }`}
                 >
                   {c.name}
-                </button>
+                </motion.button>
               ))}
             </div>
             <p className="text-xs text-neutral-500 mb-2">Tags</p>
-            <div className="flex flex-wrap gap-1">
-              {tags.map((t) => {
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((t, i) => {
                 const selected = tagIds.includes(t.id);
                 return (
-                  <button
+                  <motion.button
                     key={t.id}
                     type="button"
                     onClick={() => {
                       setTagIds((prev) => selected ? prev.filter((id) => id !== t.id) : [...prev, t.id]);
                       setPage(0);
                     }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.15 + i * 0.02 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                      selected ? "bg-[var(--brand-red)]/20 text-[var(--brand-red)] border border-[var(--brand-red)]/40" : "bg-white/10 text-neutral-400 hover:text-[var(--brand-white)]"
+                      selected ? "bg-[var(--brand-red)]/20 text-[var(--brand-red)] border border-[var(--brand-red)]/40" : "bg-white/10 text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/15"
                     }`}
                   >
                     {t.name}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -158,24 +178,33 @@ export default function BrowsePage() {
         <main className="flex-1 min-w-0">
           {/* Mobile filters */}
           <div className="sm:hidden mb-4 flex flex-wrap gap-2">
-            <button
+            <motion.button
               type="button"
               onClick={() => { setCategoryId(null); setPage(0); }}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${categoryId === null ? "bg-[var(--brand-blue)] text-white" : "bg-white/10 text-neutral-400"}`}
+              whileTap={{ scale: 0.96 }}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${categoryId === null ? "bg-[var(--brand-blue)] text-white" : "bg-white/10 text-neutral-400 hover:bg-white/15"}`}
             >
               All
-            </button>
-            {categories.map((c) => (
-              <button key={c.id} type="button" onClick={() => { setCategoryId(c.id); setPage(0); }}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium ${categoryId === c.id ? "bg-[var(--brand-blue)] text-white" : "bg-white/10 text-neutral-400"}`}>
+            </motion.button>
+            {categories.map((c, i) => (
+              <motion.button
+                key={c.id}
+                type="button"
+                onClick={() => { setCategoryId(c.id); setPage(0); }}
+                whileTap={{ scale: 0.96 }}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 + i * 0.03 }}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${categoryId === c.id ? "bg-[var(--brand-blue)] text-white" : "bg-white/10 text-neutral-400 hover:bg-white/15"}`}
+              >
                 {c.name}
-              </button>
+              </motion.button>
             ))}
           </div>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
             className="mb-4 flex flex-wrap items-center justify-between gap-2"
           >
             <p className="text-sm text-neutral-400">
@@ -188,10 +217,13 @@ export default function BrowsePage() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0.3 }}
-                  animate={{ opacity: 0.6 }}
-                  className="rounded-2xl bg-white/[0.04] overflow-hidden aspect-[3/4]"
-                />
+                  initial={{ opacity: 0.4 }}
+                  animate={{ opacity: 0.7 }}
+                  transition={{ delay: i * 0.05, repeat: Infinity, duration: 1.2, repeatType: "reverse" }}
+                  className="relative rounded-2xl bg-white/[0.04] overflow-hidden aspect-[3/4]"
+                >
+                  <div className="absolute inset-0 loading-shimmer-bar opacity-20" />
+                </motion.div>
               ))}
             </div>
           )}
@@ -200,6 +232,7 @@ export default function BrowsePage() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
               className="rounded-2xl bg-[var(--brand-red)]/10 p-8 text-center shadow-[0_0_0_1px_rgba(229,115,115,0.2)]"
             >
               <p className="text-[var(--brand-white)] font-medium mb-1">Could not load products</p>
@@ -210,11 +243,18 @@ export default function BrowsePage() {
 
           {showEmpty && (
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
               className="rounded-2xl bg-white/[0.04] p-12 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
             >
-              <Package className="mx-auto w-14 h-14 text-neutral-600 mb-4" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0.5 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Package className="mx-auto w-14 h-14 text-neutral-600 mb-4" />
+              </motion.div>
               <p className="text-[var(--brand-white)] font-medium mb-1">No products found</p>
               <p className="text-sm text-neutral-400">
                 {debouncedQuery || categoryId || tagIds.length ? "Try a different search or category." : "No products in the marketplace yet. Sellers can add products from Listings, or run the backend seeder: npm run seed:products"}
@@ -234,29 +274,34 @@ export default function BrowsePage() {
 
           {showResults && nbPages > 1 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-8 flex flex-wrap items-center justify-center gap-2"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-8 flex flex-wrap items-center justify-center gap-3"
             >
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setPage((prev) => Math.max(0, prev - 1))}
                 disabled={page === 0}
-                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                whileHover={page > 0 ? { scale: 1.03 } : {}}
+                whileTap={page > 0 ? { scale: 0.98 } : {}}
+                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors border border-white/5"
               >
                 Previous
-              </button>
+              </motion.button>
               <span className="text-sm text-neutral-400 px-2">
                 Page {page + 1} of {nbPages}
               </span>
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setPage((prev) => Math.min(nbPages - 1, prev + 1))}
                 disabled={page >= nbPages - 1}
-                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                whileHover={page < nbPages - 1 ? { scale: 1.03 } : {}}
+                whileTap={page < nbPages - 1 ? { scale: 0.98 } : {}}
+                className="rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/[0.1] disabled:opacity-40 disabled:pointer-events-none transition-colors border border-white/5"
               >
                 Next
-              </button>
+              </motion.button>
             </motion.div>
           )}
         </main>
@@ -281,12 +326,12 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ delay: index * 0.03, type: "spring", stiffness: 400, damping: 30 }}
-      whileHover={{ y: -4 }}
-      className="group rounded-2xl bg-white/[0.04] overflow-hidden hover:bg-white/[0.07] transition-all duration-200 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_24px_-8px_rgba(0,0,0,0.3)]"
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ delay: index * 0.04, type: "spring", stiffness: 400, damping: 28 }}
+      whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 400, damping: 25 } }}
+      className="group rounded-2xl bg-white/[0.04] overflow-hidden hover:bg-white/[0.07] transition-shadow duration-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_12px_32px_-8px_rgba(100,181,246,0.15)]"
     >
       <Link href={`/dashboard/product/${product.id}`} className="block">
       <div className="aspect-square bg-white/5 relative overflow-hidden">
@@ -295,7 +340,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             src={product.imageUrl}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
             sizes="(max-width: 640px) 100vw, 33vw"
           />
         ) : (
@@ -303,15 +348,17 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             <ImageIcon className="w-14 h-14" />
           </div>
         )}
-        <button
+        <motion.button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(); }}
           disabled={loading}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-2 backdrop-blur-sm hover:bg-black/80 transition-colors disabled:opacity-60"
           aria-label={favourited ? "Remove from favourites" : "Add to favourites"}
         >
-          <Heart className={`w-5 h-5 ${favourited ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : "text-white"}`} />
-        </button>
+          <Heart className={`w-5 h-5 transition-colors ${favourited ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : "text-white"}`} />
+        </motion.button>
         {product.category && (
           <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
             {product.category}
@@ -335,9 +382,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         {product.description && (
           <p className="mt-1 text-sm text-neutral-400 line-clamp-2">{product.description}</p>
         )}
-        <div className="mt-3 flex items-center gap-1 text-xs text-neutral-500">
+        <div className="mt-3 flex items-center gap-1 text-xs text-neutral-500 group-hover:text-[var(--brand-blue)] transition-colors">
           <span>View product</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
         </div>
       </div>
       </Link>

@@ -408,13 +408,31 @@ export async function productUnarchive(id: string): Promise<Product | null> {
 }
 
 // Product detail (buyer): get by id with reviews, like count, etc.
+export interface ProductReviewReply {
+  id: string;
+  userId: string;
+  userName: string;
+  parentId?: string;
+  comment?: string;
+  imageUrls: string[];
+  createdAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  userReaction: "like" | "dislike" | null;
+}
+
 export interface ProductReview {
   id: string;
   userId: string;
   userName: string;
-  rating: number;
+  rating?: number;
   comment?: string;
+  imageUrls?: string[];
   createdAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  userReaction: "like" | "dislike" | null;
+  replies: ProductReviewReply[];
 }
 
 export interface ProductDetailResponse {
@@ -424,6 +442,7 @@ export interface ProductDetailResponse {
   averageRating: number;
   userLiked: boolean;
   reviews: ProductReview[];
+  sellerKycVerified?: boolean;
 }
 
 export async function getProductById(id: string): Promise<ProductDetailResponse | null> {
@@ -436,6 +455,7 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
       averageRating: number;
       userLiked: boolean;
       reviews: ProductReview[];
+      sellerKycVerified?: boolean;
     }>(`/products/${id}`);
     if (data.status === "success") {
       return {
@@ -445,6 +465,7 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
         averageRating: data.averageRating ?? 0,
         userLiked: data.userLiked ?? false,
         reviews: data.reviews ?? [],
+        sellerKycVerified: data.sellerKycVerified ?? false,
       };
     }
     return null;
@@ -453,12 +474,66 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
   }
 }
 
-export async function addProductReview(productId: string, rating: number, comment?: string): Promise<{ success: boolean }> {
+export async function addProductReview(
+  productId: string,
+  rating: number,
+  comment?: string,
+  parentId?: string,
+  imageUrls?: string[]
+): Promise<{ success: boolean }> {
   try {
-    const { data } = await api.post<{ status: string }>(`/products/${productId}/reviews`, { rating, comment });
+    const body: { rating?: number; comment?: string; parentId?: string; imageUrls?: string[] } = {};
+    if (parentId) {
+      body.parentId = parentId;
+      if (comment !== undefined) body.comment = comment;
+      if (imageUrls?.length) body.imageUrls = imageUrls;
+    } else {
+      body.rating = rating;
+      if (comment !== undefined) body.comment = comment;
+      if (imageUrls?.length) body.imageUrls = imageUrls;
+    }
+    const { data } = await api.post<{ status: string }>(`/products/${productId}/reviews`, body);
     return { success: data.status === "success" };
   } catch {
     return { success: false };
+  }
+}
+
+export async function uploadReviewImage(productId: string, file: File): Promise<{ url: string } | null> {
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    const { data } = await api.post<{ status: string; url?: string }>(`/products/${productId}/reviews/upload-image`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    if (data.status === "success" && data.url) return { url: data.url };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function addReviewReaction(
+  productId: string,
+  reviewId: string,
+  type: "like" | "dislike"
+): Promise<{ likeCount: number; dislikeCount: number; userReaction: "like" | "dislike" | null } | null> {
+  try {
+    const { data } = await api.post<{
+      status: string;
+      likeCount: number;
+      dislikeCount: number;
+      userReaction: "like" | "dislike" | null;
+    }>(`/products/${productId}/reviews/${reviewId}/reaction`, { type });
+    if (data.status === "success")
+      return {
+        likeCount: data.likeCount ?? 0,
+        dislikeCount: data.dislikeCount ?? 0,
+        userReaction: data.userReaction ?? null,
+      };
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -1103,5 +1178,28 @@ export async function unsendMessage(messageId: string): Promise<boolean> {
     return data.status === "success";
   } catch {
     return false;
+  }
+}
+
+// ——— BazarCoBot ———
+export type BotMessage = { role: "user" | "assistant"; content: string };
+
+export async function chatBot(
+  messages: BotMessage[],
+  options?: { includeContext?: boolean }
+): Promise<{ reply: string } | { error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; reply?: string; message?: string }>("/bot/chat", {
+      messages,
+      includeContext: options?.includeContext !== false,
+    });
+    if (data.status === "success" && typeof data.reply === "string") return { reply: data.reply };
+    return { error: (data as { message?: string }).message ?? "Bot unavailable." };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      return { error: body.message ?? "Something went wrong." };
+    }
+    return { error: "Could not reach the server. Try again." };
   }
 }

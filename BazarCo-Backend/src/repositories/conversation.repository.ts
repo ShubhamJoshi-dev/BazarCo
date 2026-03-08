@@ -22,12 +22,22 @@ export async function createOrGetByProduct(productId: string, buyerId: string, s
   return { ...doc, id: doc._id.toString() };
 }
 
-/** One conversation per (buyer, seller) for unified chat with that user. */
+/** One conversation per (buyer, seller) when productId is null (unified chat). Reuse existing if any (e.g. from order). */
 export async function createOrGetByUser(buyerId: string, sellerId: string) {
-  let doc = await Conversation.findOne({ buyerId, sellerId, orderId: null, productId: null }).lean();
+  // Find any existing convo with this pair and productId null (unique index allows only one)
+  let doc = await Conversation.findOne({ buyerId, sellerId, productId: null }).lean();
   if (doc) return { ...doc, id: doc._id.toString() };
-  doc = (await Conversation.create({ buyerId, sellerId, orderId: null, productId: null })).toObject();
-  return { ...doc, id: doc._id.toString() };
+  try {
+    doc = (await Conversation.create({ buyerId, sellerId, orderId: null, productId: null })).toObject();
+    return { ...doc, id: doc._id.toString() };
+  } catch (err: unknown) {
+    const isDup = err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000;
+    if (isDup) {
+      const existing = await Conversation.findOne({ buyerId, sellerId, productId: null }).lean();
+      if (existing) return { ...existing, id: existing._id.toString() };
+    }
+    throw err;
+  }
 }
 
 /** All conversation ids for a given (buyerId, sellerId) pair (for merging messages). */

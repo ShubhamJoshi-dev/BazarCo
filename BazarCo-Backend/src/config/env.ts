@@ -33,6 +33,7 @@ const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY ?? "").trim();
 
 const REDIS_URI = (process.env.REDIS_URI ?? "").trim();
 const UNSEND_MESSAGE_WINDOW_MINUTES = Number(process.env.UNSEND_MESSAGE_WINDOW_MINUTES) || 15;
+const OPENAI_API_KEY = (process.env.OPENAI_API_KEY ?? "").trim();
 
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
@@ -62,6 +63,7 @@ export const env = {
   STRIPE_SECRET_KEY,
   REDIS_URI,
   UNSEND_MESSAGE_WINDOW_MINUTES,
+  OPENAI_API_KEY,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;

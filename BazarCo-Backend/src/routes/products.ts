@@ -12,7 +12,7 @@ import {
   browseProducts,
   getProductById,
 } from "../controllers/productController";
-import { addOrUpdateReview } from "../controllers/reviewController";
+import { addOrUpdateReview, addReaction, uploadReviewImageHandler } from "../controllers/reviewController";
 import { toggleLike } from "../controllers/likeController";
 
 export const productsRouter = Router();
@@ -21,7 +21,17 @@ productsRouter.use(requireAuth);
 productsRouter.get("/browse", browseProducts);
 productsRouter.get("/", listProducts);
 productsRouter.get("/:id", getProductById);
+productsRouter.post("/:id/reviews/upload-image", (req, res, next) => {
+  uploadSingleImage(req, res, (e) => {
+    if (e) {
+      res.status(400).json({ status: "error", message: e instanceof Error ? e.message : "Invalid file" });
+      return;
+    }
+    next();
+  });
+}, uploadReviewImageHandler);
 productsRouter.post("/:id/reviews", addOrUpdateReview);
+productsRouter.post("/:id/reviews/:reviewId/reaction", addReaction);
 productsRouter.post("/:id/like", toggleLike);
 productsRouter.post("/", requireSeller, (req, res, next) => {
   uploadSingleImage(req, res, (e) => {

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { addressesRouter } from "./addresses";
 import { authRouter } from "./auth";
+import { botRouter } from "./bot";
 import { chatRouter } from "./chat";
 import { cartRouter } from "./cart";
 import { checkoutRouter } from "./checkout";
@@ -19,6 +20,7 @@ const router = Router();
 
 router.use("/addresses", addressesRouter);
 router.use("/auth", authRouter);
+router.use("/bot", botRouter);
 router.use("/chat", chatRouter);
 router.use("/cart", cartRouter);
 router.use("/checkout", checkoutRouter);

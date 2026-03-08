@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Loader2, ChevronRight, MapPin, Package, Calendar, UserCircle, Zap, CheckCircle2, Truck, XCircle } from "lucide-react";
+import { ShoppingBag, Loader2, ChevronRight, MapPin, Package, Calendar, UserCircle, Zap, CheckCircle2, Truck, XCircle, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { listOrders, updateOrderStatus, type Order } from "@/lib/api";
@@ -26,7 +25,7 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
   };
   const { class: s, icon: Icon } = config[status] ?? config.pending;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${s} transition-transform hover:scale-[1.02]`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${s}`}>
       <Icon className="w-3.5 h-3.5 shrink-0" />
       {label}
     </span>
@@ -34,6 +33,7 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
 }
 
 const STATUS_OPTIONS = [
+  { value: "pending", labelKey: "statusPending" as const },
   { value: "paid", labelKey: "statusPaid" as const },
   { value: "in_progress", labelKey: "statusInProgress" as const },
   { value: "completed", labelKey: "statusCompleted" as const },
@@ -62,6 +62,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("");
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
@@ -86,15 +87,16 @@ export default function OrdersPage() {
     if (ok) fetchOrders();
   };
 
+  const sortedOrders = [...orders].sort((a, b) => {
+    const da = new Date(a.createdAt).getTime();
+    const db = new Date(b.createdAt).getTime();
+    return sortNewestFirst ? db - da : da - db;
+  });
+
   if (loading && orders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        >
-          <Loader2 className="w-10 h-10 text-[var(--brand-blue)]" />
-        </motion.div>
+        <Loader2 className="w-10 h-10 text-[var(--brand-blue)] animate-pulse" />
         <p className="text-sm text-neutral-400">Loading orders…</p>
       </div>
     );
@@ -103,103 +105,137 @@ export default function OrdersPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--brand-white)] flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] shadow-[0_0_20px_rgba(59,130,246,0.15)]">
-              <ShoppingBag className="w-6 h-6" />
-            </span>
-            {isSeller ? t("orderDashboard") : t("orderHistory")}
-          </h1>
-          <p className="text-sm text-neutral-400 mt-1.5">
-            {orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? "s" : ""}` : "Manage and track your orders"}
-          </p>
+      <div className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--brand-white)] flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                <ShoppingBag className="w-6 h-6" />
+              </span>
+              {isSeller ? t("orderDashboard") : t("orderHistory")}
+            </h1>
+            <p className="text-sm text-neutral-400 mt-1.5">
+              {orders.length > 0
+                ? filter
+                  ? `${orders.length} order${orders.length !== 1 ? "s" : ""} (filtered)`
+                  : `${orders.length} order${orders.length !== 1 ? "s" : ""}`
+                : isSeller
+                  ? "Orders from buyers appear here"
+                  : "Your orders and delivery status"}
+            </p>
+          </div>
         </div>
-        {isSeller && (
-          <>
-            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-1.5 flex-wrap">
+
+        {/* Status filter — for both buyer and seller */}
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Filter by status</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFilter("")}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${
+                filter === ""
+                  ? "bg-[var(--brand-blue)] text-white shadow-md shadow-[var(--brand-blue)]/25"
+                  : "bg-white/[0.06] text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/10 border border-white/10"
+              }`}
+            >
+              {t("allStatuses")}
+            </button>
+            {STATUS_OPTIONS.map((opt) => (
               <button
+                key={opt.value}
                 type="button"
-                onClick={() => setFilter("")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                  filter === ""
-                    ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] shadow-sm"
-                    : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
+                onClick={() => setFilter(opt.value)}
+                className={`rounded-full px-4 py-2 text-sm font-medium ${
+                  filter === opt.value
+                    ? "bg-[var(--brand-blue)] text-white shadow-md shadow-[var(--brand-blue)]/25"
+                    : "bg-white/[0.06] text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/10 border border-white/10"
                 }`}
               >
-                {t("allStatuses")}
+                {t(opt.labelKey)}
               </button>
-              {STATUS_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setFilter(opt.value)}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                    filter === opt.value
-                      ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] shadow-sm"
-                      : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
-                  }`}
-                >
-                  {t(opt.labelKey)}
-                </button>
-              ))}
-            </div>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="sm:hidden rounded-xl bg-white/[0.06] border border-white/10 px-4 py-2.5 text-sm text-[var(--brand-white)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 w-full max-w-[200px]"
+            ))}
+          </div>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="sm:hidden rounded-xl bg-white/[0.06] border border-white/10 px-4 py-2.5 text-sm text-[var(--brand-white)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 w-full max-w-[220px]"
+            aria-label="Filter by status"
+          >
+            <option value="">{t("allStatuses")}</option>
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+
+          {/* Sort */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-neutral-500">Sort:</span>
+            <button
+              type="button"
+              onClick={() => setSortNewestFirst(true)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                sortNewestFirst ? "bg-white/10 text-[var(--brand-white)]" : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+              title="Newest first"
             >
-              <option value="">{t("allStatuses")}</option>
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </motion.div>
+              <ArrowDownAZ className="w-4 h-4" />
+              Newest
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortNewestFirst(false)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                !sortNewestFirst ? "bg-white/10 text-[var(--brand-white)]" : "text-neutral-400 hover:text-[var(--brand-white)]"
+              }`}
+              title="Oldest first"
+            >
+              <ArrowUpAZ className="w-4 h-4" />
+              Oldest
+            </button>
+          </div>
+        </div>
+      </div>
 
       {orders.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-16 text-center"
-        >
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-16 text-center">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/[0.06] border border-white/10">
             <ShoppingBag className="w-10 h-10 text-neutral-500" />
           </div>
           <p className="text-lg font-semibold text-[var(--brand-white)] mb-2">{t("noOrders")}</p>
           <p className="text-sm text-neutral-400 mb-8 max-w-sm mx-auto">
-            {isSeller ? t("noOrdersSeller") : t("noOrdersBuyer")}
+            {filter
+              ? "No orders match this filter. Try a different status."
+              : isSeller
+                ? t("noOrdersSeller")
+                : t("noOrdersBuyer")}
           </p>
-          {!isSeller && (
-            <Link
-              href="/dashboard/browse"
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border border-[var(--brand-blue)]/40 px-5 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue)]/30 transition-colors"
+          {filter ? (
+            <button
+              type="button"
+              onClick={() => setFilter("")}
+              className="inline-flex items-center gap-2 rounded-xl bg-white/10 text-[var(--brand-white)] border border-white/10 px-5 py-2.5 text-sm font-medium hover:bg-white/15"
             >
-              {t("browseProducts")}
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+              Clear filter
+            </button>
+          ) : (
+            !isSeller && (
+              <Link
+                href="/dashboard/browse"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border border-[var(--brand-blue)]/40 px-5 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue)]/30 transition-colors"
+              >
+                {t("browseProducts")}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            )
           )}
-        </motion.div>
+        </div>
       ) : (
         <ul className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {orders.map((order, i) => (
-              <motion.li
-                key={order.id}
-                layout
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="group list-none"
-              >
+          {sortedOrders.map((order) => (
+              <li key={order.id} className="group list-none">
                 <div
                   className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${statusAccentColor[order.status] ?? "from-white/[0.04]"} to-white/[0.02] p-0 transition-all duration-300 hover:border-white/20 hover:shadow-[0_12px_40px_rgba(0,0,0,0.25)] hover:shadow-[var(--brand-blue)]/5 hover:-translate-y-0.5`}
                 >
@@ -291,9 +327,8 @@ export default function OrdersPage() {
                     </div>
                   </div>
                 </div>
-              </motion.li>
+              </li>
             ))}
-          </AnimatePresence>
         </ul>
       )}
     </div>

@@ -51,6 +51,11 @@ export async function uploadDocument(
   });
 }
 
+/** Upload review image. Returns URL or null. */
+export async function uploadReviewImage(buffer: Buffer): Promise<string | null> {
+  return uploadImage(buffer, "bazarco/reviews");
+}
+
 /** Delete an image by Cloudinary public_id. Returns true if deleted or not configured. */
 export async function deleteByPublicId(publicId: string): Promise<boolean> {
   if (!isCloudinaryConfigured() || !publicId?.trim()) return true;

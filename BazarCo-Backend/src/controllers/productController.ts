@@ -5,6 +5,7 @@ import * as productRepo from "../repositories/product.repository";
 import * as categoryRepo from "../repositories/category.repository";
 import * as tagRepo from "../repositories/tag.repository";
 import * as reviewRepo from "../repositories/review.repository";
+import * as reactionRepo from "../repositories/reviewReaction.repository";
 import * as likeRepo from "../repositories/like.repository";
 import * as userRepo from "../repositories/user.repository";
 import { uploadImage, isCloudinaryConfigured } from "../services/cloudinary.service";
@@ -461,21 +462,90 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
     reviewRepo.findByProduct(id),
   ]);
 
-  const reviewsWithUser = await Promise.all(
-    reviews.map(async (r) => {
-      const rev = r as Record<string, unknown> & { _id: Types.ObjectId; userId: Types.ObjectId; rating: number; comment?: string | null; createdAt: Date };
-      const u = await userRepo.findById(rev.userId.toString());
+  const rootIds = reviews.map((r) => (r as { _id: Types.ObjectId })._id.toString());
+  const [repliesMap, reactionCounts, userReactions] = await Promise.all([
+    reviewRepo.findRepliesByParentIds(rootIds),
+    reactionRepo.getCountsForMany(rootIds),
+    reactionRepo.getUserReactionsForMany(rootIds, req.user.id),
+  ]);
+
+  const allAuthorIds = new Set<string>();
+  for (const r of reviews) {
+    allAuthorIds.add((r as { userId: Types.ObjectId }).userId.toString());
+  }
+  for (const [, replyList] of repliesMap) {
+    for (const rep of replyList as { userId: Types.ObjectId }[]) {
+      allAuthorIds.add(rep.userId.toString());
+    }
+  }
+  const replyDocsByParent = new Map<string, { _id: Types.ObjectId; userId: Types.ObjectId; parentId: Types.ObjectId; comment?: string; imageUrls?: string[]; createdAt: Date }[]>();
+  for (const [parentId, list] of repliesMap) {
+    replyDocsByParent.set(parentId, list as { _id: Types.ObjectId; userId: Types.ObjectId; parentId: Types.ObjectId; comment?: string; imageUrls?: string[]; createdAt: Date }[]);
+    for (const rep of list as { userId: Types.ObjectId }[]) {
+      allAuthorIds.add(rep.userId.toString());
+    }
+  }
+  const namesByUserId = new Map<string, string>();
+  await Promise.all(
+    Array.from(allAuthorIds).map(async (uid) => {
+      const u = await userRepo.findById(uid);
       const name = (u as { name?: string } | null)?.name ?? (u as { email?: string })?.email ?? "User";
-      return {
-        id: rev._id.toString(),
-        userId: rev.userId.toString(),
-        userName: name,
-        rating: rev.rating,
-        comment: rev.comment ?? undefined,
-        createdAt: (rev.createdAt as Date).toISOString(),
-      };
+      namesByUserId.set(uid, name);
     })
   );
+
+  const replyIds: string[] = [];
+  for (const list of replyDocsByParent.values()) {
+    for (const r of list) {
+      replyIds.push(r._id.toString());
+    }
+  }
+  const [replyReactionCounts, replyUserReactions] = await Promise.all([
+    replyIds.length ? reactionRepo.getCountsForMany(replyIds) : Promise.resolve(new Map()),
+    replyIds.length ? reactionRepo.getUserReactionsForMany(replyIds, req.user.id) : Promise.resolve(new Map()),
+  ]);
+
+  const reviewsWithUser = reviews.map((r) => {
+    const rev = r as Record<string, unknown> & { _id: Types.ObjectId; userId: Types.ObjectId; rating?: number; comment?: string | null; imageUrls?: string[]; createdAt: Date };
+    const rid = rev._id.toString();
+    const uid = rev.userId.toString();
+    const replies = (replyDocsByParent.get(rid) ?? []).map((rep) => {
+      const repId = rep._id.toString();
+      const repUid = rep.userId.toString();
+      const rc = replyReactionCounts.get(repId) ?? { likeCount: 0, dislikeCount: 0 };
+      const ur = replyUserReactions.get(repId) ?? null;
+      return {
+        id: repId,
+        userId: repUid,
+        userName: namesByUserId.get(repUid) ?? "User",
+        parentId: rep.parentId?.toString?.(),
+        comment: rep.comment ?? undefined,
+        imageUrls: Array.isArray(rep.imageUrls) ? rep.imageUrls : [],
+        createdAt: (rep.createdAt as Date).toISOString(),
+        likeCount: rc.likeCount,
+        dislikeCount: rc.dislikeCount,
+        userReaction: ur,
+      };
+    });
+    const counts = reactionCounts.get(rid) ?? { likeCount: 0, dislikeCount: 0 };
+    const userReaction = userReactions.get(rid) ?? null;
+    return {
+      id: rid,
+      userId: uid,
+      userName: namesByUserId.get(uid) ?? "User",
+      rating: rev.rating,
+      comment: rev.comment ?? undefined,
+      imageUrls: Array.isArray(rev.imageUrls) ? rev.imageUrls : [],
+      createdAt: (rev.createdAt as Date).toISOString(),
+      likeCount: counts.likeCount,
+      dislikeCount: counts.dislikeCount,
+      userReaction,
+      replies,
+    };
+  });
+
+  const seller = await userRepo.findById(doc.sellerId.toString());
+  const sellerKycVerified = (seller as { kycVerified?: boolean } | null)?.kycVerified ?? false;
 
   successResponse(res, 200, "Product found", {
     product: productDto,
@@ -484,5 +554,6 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
     averageRating: averageRating ?? 0,
     userLiked,
     reviews: reviewsWithUser,
+    sellerKycVerified,
   });
 }

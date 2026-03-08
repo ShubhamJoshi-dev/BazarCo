@@ -105,13 +105,17 @@ export default function DashboardPage() {
         className="grid gap-4 sm:grid-cols-2"
       >
         <motion.div
-          whileHover={{ y: -2 }}
-          className="group rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5 transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10"
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className="group rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5 transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:shadow-[0_12px_40px_-12px_rgba(16,185,129,0.25)]"
         >
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 transition-colors group-hover:bg-emerald-500/30">
+            <motion.div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 transition-colors group-hover:bg-emerald-500/30"
+              whileHover={{ scale: 1.08 }}
+            >
               <ShieldCheck className="h-6 w-6" strokeWidth={2} />
-            </div>
+            </motion.div>
             <div>
               <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("verifiedSellers")}</h3>
               <p className="text-sm text-neutral-400 leading-relaxed">
@@ -121,13 +125,17 @@ export default function DashboardPage() {
           </div>
         </motion.div>
         <motion.div
-          whileHover={{ y: -2 }}
-          className="group rounded-2xl border border-[var(--brand-blue)]/25 bg-[var(--brand-blue)]/5 p-5 transition-all duration-200 hover:border-[var(--brand-blue)]/40 hover:bg-[var(--brand-blue)]/10"
+          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className="group rounded-2xl border border-[var(--brand-blue)]/25 bg-[var(--brand-blue)]/5 p-5 transition-all duration-200 hover:border-[var(--brand-blue)]/40 hover:bg-[var(--brand-blue)]/10 hover:shadow-[0_12px_40px_-12px_rgba(100,181,246,0.25)]"
         >
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] transition-colors group-hover:bg-[var(--brand-blue)]/30">
+            <motion.div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] transition-colors group-hover:bg-[var(--brand-blue)]/30"
+              whileHover={{ scale: 1.08 }}
+            >
               <LayoutGrid className="h-6 w-6" strokeWidth={2} />
-            </div>
+            </motion.div>
             <div>
               <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("catalogManagement")}</h3>
               <p className="text-sm text-neutral-400 leading-relaxed">
@@ -232,9 +240,9 @@ export default function DashboardPage() {
               </h3>
               <Link
                 href="/dashboard/browse"
-                className="text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1"
+                className="group/link text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1 transition-transform duration-200 hover:gap-2"
               >
-                View all <ChevronRight className="w-4 h-4" />
+                View all <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-0.5" />
               </Link>
             </div>
             {loading ? (
@@ -244,8 +252,11 @@ export default function DashboardPage() {
                     key={i}
                     initial={{ opacity: 0.3 }}
                     animate={{ opacity: 0.6 }}
-                    className="rounded-xl border border-white/10 bg-white/5 aspect-[3/4]"
-                  />
+                    transition={{ repeat: Infinity, duration: 1.2, repeatType: "reverse" }}
+                    className="relative rounded-xl border border-white/10 bg-white/5 aspect-[3/4] overflow-hidden"
+                  >
+                    <div className="absolute inset-0 loading-shimmer-bar opacity-30" />
+                  </motion.div>
                 ))}
               </div>
             ) : hotSales.length > 0 ? (
@@ -278,9 +289,9 @@ export default function DashboardPage() {
               </h3>
               <Link
                 href="/dashboard/browse"
-                className="text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1"
+                className="group/link text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1 transition-transform duration-200 hover:gap-2"
               >
-                {t("viewAll")} <ChevronRight className="w-4 h-4" />
+                {t("viewAll")} <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-0.5" />
               </Link>
             </div>
             {loading ? (
@@ -290,8 +301,11 @@ export default function DashboardPage() {
                     key={i}
                     initial={{ opacity: 0.3 }}
                     animate={{ opacity: 0.6 }}
-                    className="rounded-xl border border-white/10 bg-white/5 aspect-[3/4]"
-                  />
+                    transition={{ repeat: Infinity, duration: 1.2, repeatType: "reverse" }}
+                    className="rounded-xl border border-white/10 bg-white/5 aspect-[3/4] overflow-hidden relative"
+                  >
+                    <div className="absolute inset-0 loading-shimmer-bar opacity-30" />
+                  </motion.div>
                 ))}
               </div>
             ) : bestSelling.length > 0 ? (
@@ -318,7 +332,8 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          whileHover={{ y: -2 }}
+          whileHover={{ y: -4, scale: 1.02 }}
+          className="transition-shadow duration-200 hover:shadow-[0_8px_24px_-8px_rgba(229,115,115,0.3)]"
         >
           <Link
             href={isSeller ? "/dashboard/products" : "/dashboard/browse"}
@@ -341,7 +356,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            whileHover={{ y: -2 }}
+            whileHover={{ y: -4, scale: 1.02 }}
           >
             <Link
               href="/dashboard/offers"
@@ -363,7 +378,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.18 }}
-            whileHover={{ y: -2 }}
+            whileHover={{ y: -4, scale: 1.02 }}
           >
             <Link
               href="/dashboard/chat"
@@ -384,7 +399,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: isSeller ? 0.2 : 0.2 }}
-          whileHover={{ y: -2 }}
+          whileHover={{ y: -4, scale: 1.02 }}
         >
           <Link
             href="/dashboard/profile"
@@ -441,11 +456,11 @@ function DashboardProductCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, type: "spring", stiffness: 400, damping: 28 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 400, damping: 25 } }}
     >
       <Link
         href={`/dashboard/product/${product.id}`}
-        className="group block rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] transition-all duration-200"
+        className="group block rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] hover:shadow-[0_12px_32px_-8px_rgba(100,181,246,0.2)] transition-all duration-300"
       >
         <div className="aspect-square bg-white/5 relative overflow-hidden">
           {product.imageUrl ? (
@@ -453,7 +468,7 @@ function DashboardProductCard({
               src={product.imageUrl}
               alt={product.name}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
               sizes="(max-width: 640px) 50vw, 25vw"
             />
           ) : (

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { env } from "./env";
 import { DATABASE_CLUSTER_MONGO_ENABLED } from "../constant/database.constant";
 import { Conversation } from "../models/conversation.model";
+import { Review } from "../models/review.model";
 
 function getMongoUri(): string {
   const useAtlas = DATABASE_CLUSTER_MONGO_ENABLED || env.CLUSTER_MONGO_ENABLED;
@@ -20,10 +21,20 @@ async function dropOldConversationOrderIndex(): Promise<void> {
   }
 }
 
+/** One-time: drop old review unique index so partial index (parentId null) can be used for replies. */
+async function dropOldReviewIndex(): Promise<void> {
+  try {
+    await Review.collection.dropIndex("productId_1_userId_1");
+  } catch {
+    // Index may not exist or already dropped
+  }
+}
+
 export async function connectDb(): Promise<void> {
   const uri = getMongoUri();
   await mongoose.connect(uri);
   await dropOldConversationOrderIndex();
+  await dropOldReviewIndex();
 }
 
 export async function disconnectDb(): Promise<void> {
