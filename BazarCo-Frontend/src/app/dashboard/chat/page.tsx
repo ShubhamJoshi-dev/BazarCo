@@ -93,6 +93,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+  const [listError, setListError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,9 +108,15 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    setListError(null);
     (async () => {
       const list = await listConversations();
-      setConversations(list);
+      if (list === null) {
+        setListError("Could not load conversations. Check your connection and that the backend is running.");
+        setConversations([]);
+      } else {
+        setConversations(list);
+      }
       setLoadingList(false);
     })();
   }, []);
@@ -284,6 +291,11 @@ export default function ChatPage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-[var(--brand-blue)] animate-spin" />
               </div>
+            ) : listError ? (
+              <div className="py-12 text-center px-4">
+                <p className="text-sm text-[var(--brand-red)] mb-2">{listError}</p>
+                <p className="text-xs text-neutral-500">{t("noConversationsHint")}</p>
+              </div>
             ) : conversations.length === 0 ? (
               <div className="py-12 text-center">
                 <MessageCircle className="mx-auto w-12 h-12 text-neutral-500 mb-3" />
@@ -423,13 +435,16 @@ export default function ChatPage() {
                 </div>
 
                 <div className="border-t border-white/10 p-3 shrink-0 bg-white/[0.02]">
+                  {!connected && (
+                    <p className="text-xs text-amber-400 mb-2">Reconnecting… Send will work when connected.</p>
+                  )}
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={input}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder={t("typeMessage")}
+                      placeholder={connected ? t("typeMessage") : t("typeMessage") + " (connecting…)"}
                       className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/50"
                       disabled={!connected}
                     />

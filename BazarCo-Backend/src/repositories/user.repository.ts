@@ -60,3 +60,7 @@ export async function clearResetTokenAndSetPassword(userId: string, hashedPasswo
     resetPasswordExpires: undefined,
   });
 }
+
+export async function setKycVerified(userId: string, verified: boolean) {
+  return User.findByIdAndUpdate(userId, { kycVerified: verified }, { new: true });
+}

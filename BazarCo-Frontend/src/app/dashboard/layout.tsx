@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChatSocketProvider } from "@/contexts/ChatSocketContext";
 import { BuyerDashboardLayout } from "@/components/dashboard/BuyerDashboardLayout";
 import { SellerDashboardLayout } from "@/components/dashboard/SellerDashboardLayout";
+import { BazarCoBot } from "@/components/BazarCoBot";
 
 export default function DashboardLayout({
   children,
@@ -48,6 +49,7 @@ export default function DashboardLayout({
   return (
     <ChatSocketProvider>
       <BuyerDashboardLayout>{children}</BuyerDashboardLayout>
+      <BazarCoBot />
     </ChatSocketProvider>
   );
 }

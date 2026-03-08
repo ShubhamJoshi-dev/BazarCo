@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   BarChart3,
   Package,
@@ -13,6 +14,7 @@ import {
   List,
   CheckCircle2,
   Clock,
+  ChevronRight,
 } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { sellerReport, type SellerReport } from "@/lib/api";
@@ -76,17 +78,26 @@ export default function ReportPage() {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
-        <h1 className="text-2xl font-bold text-[var(--brand-white)]">Report & analysis</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--brand-white)]">Reports</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">Detailed sales, products, and order reports for your store</p>
+        </div>
+        <Link
+          href="/dashboard/analytics"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-blue)] hover:underline shrink-0"
+        >
+          Analytics overview <ChevronRight className="w-4 h-4" />
+        </Link>
       </motion.div>
 
-      {/* Rating & overview cards */}
+      {/* Summary cards - Shopify-style */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5 flex items-center gap-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4 hover:border-amber-500/25 hover:bg-amber-500/5 transition-colors">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
             <Star className="h-6 w-6" fill="currentColor" />
           </div>
@@ -99,7 +110,7 @@ export default function ReportPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4 hover:border-[var(--brand-blue)]/25 hover:bg-[var(--brand-blue)]/5 transition-colors">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]">
             <Package className="h-6 w-6" />
           </div>
@@ -109,7 +120,7 @@ export default function ReportPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4 hover:border-emerald-500/25 hover:bg-emerald-500/5 transition-colors">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
             <ShoppingBag className="h-6 w-6" />
           </div>
@@ -119,7 +130,7 @@ export default function ReportPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 flex items-center gap-4 hover:border-[var(--brand-red)]/25 hover:bg-[var(--brand-red)]/5 transition-colors">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-red)]/20 text-[var(--brand-red)]">
             <TrendingUp className="h-6 w-6" />
           </div>

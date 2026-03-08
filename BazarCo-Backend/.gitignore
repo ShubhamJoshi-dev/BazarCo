@@ -6,3 +6,5 @@ dist/
 .DS_Store
 coverage/
 .nyc_output/
+nep.traineddata
+eng.traineddata

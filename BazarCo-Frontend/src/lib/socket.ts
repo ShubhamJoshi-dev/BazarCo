@@ -28,15 +28,20 @@ export function connectSocket(): Socket | null {
   const token = getStoredToken();
   if (!token) return null;
   if (socketInstance?.connected) return socketInstance;
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
   const url = getBackendBaseUrl();
   socketInstance = io(url, {
     auth: { token },
     path: "/socket.io/",
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
+    timeout: 20000,
   });
   return socketInstance;
 }

@@ -408,13 +408,31 @@ export async function productUnarchive(id: string): Promise<Product | null> {
 }
 
 // Product detail (buyer): get by id with reviews, like count, etc.
+export interface ProductReviewReply {
+  id: string;
+  userId: string;
+  userName: string;
+  parentId?: string;
+  comment?: string;
+  imageUrls: string[];
+  createdAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  userReaction: "like" | "dislike" | null;
+}
+
 export interface ProductReview {
   id: string;
   userId: string;
   userName: string;
-  rating: number;
+  rating?: number;
   comment?: string;
+  imageUrls?: string[];
   createdAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  userReaction: "like" | "dislike" | null;
+  replies: ProductReviewReply[];
 }
 
 export interface ProductDetailResponse {
@@ -424,6 +442,7 @@ export interface ProductDetailResponse {
   averageRating: number;
   userLiked: boolean;
   reviews: ProductReview[];
+  sellerKycVerified?: boolean;
 }
 
 export async function getProductById(id: string): Promise<ProductDetailResponse | null> {
@@ -436,6 +455,7 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
       averageRating: number;
       userLiked: boolean;
       reviews: ProductReview[];
+      sellerKycVerified?: boolean;
     }>(`/products/${id}`);
     if (data.status === "success") {
       return {
@@ -445,6 +465,7 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
         averageRating: data.averageRating ?? 0,
         userLiked: data.userLiked ?? false,
         reviews: data.reviews ?? [],
+        sellerKycVerified: data.sellerKycVerified ?? false,
       };
     }
     return null;
@@ -453,12 +474,66 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
   }
 }
 
-export async function addProductReview(productId: string, rating: number, comment?: string): Promise<{ success: boolean }> {
+export async function addProductReview(
+  productId: string,
+  rating: number,
+  comment?: string,
+  parentId?: string,
+  imageUrls?: string[]
+): Promise<{ success: boolean }> {
   try {
-    const { data } = await api.post<{ status: string }>(`/products/${productId}/reviews`, { rating, comment });
+    const body: { rating?: number; comment?: string; parentId?: string; imageUrls?: string[] } = {};
+    if (parentId) {
+      body.parentId = parentId;
+      if (comment !== undefined) body.comment = comment;
+      if (imageUrls?.length) body.imageUrls = imageUrls;
+    } else {
+      body.rating = rating;
+      if (comment !== undefined) body.comment = comment;
+      if (imageUrls?.length) body.imageUrls = imageUrls;
+    }
+    const { data } = await api.post<{ status: string }>(`/products/${productId}/reviews`, body);
     return { success: data.status === "success" };
   } catch {
     return { success: false };
+  }
+}
+
+export async function uploadReviewImage(productId: string, file: File): Promise<{ url: string } | null> {
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    const { data } = await api.post<{ status: string; url?: string }>(`/products/${productId}/reviews/upload-image`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    if (data.status === "success" && data.url) return { url: data.url };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function addReviewReaction(
+  productId: string,
+  reviewId: string,
+  type: "like" | "dislike"
+): Promise<{ likeCount: number; dislikeCount: number; userReaction: "like" | "dislike" | null } | null> {
+  try {
+    const { data } = await api.post<{
+      status: string;
+      likeCount: number;
+      dislikeCount: number;
+      userReaction: "like" | "dislike" | null;
+    }>(`/products/${productId}/reviews/${reviewId}/reaction`, { type });
+    if (data.status === "success")
+      return {
+        likeCount: data.likeCount ?? 0,
+        dislikeCount: data.dislikeCount ?? 0,
+        userReaction: data.userReaction ?? null,
+      };
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -809,6 +884,93 @@ export async function respondToCounter(id: string, proposedPrice: number, messag
   }
 }
 
+// KYC (seller only)
+export type KycDocumentType = "national_card" | "company_card";
+
+/** Nepal national ID extracted fields (Nepali + English keys) */
+export interface NepalIdExtractedData {
+  नाम?: string;
+  name?: string;
+  जन्म_मिति?: string;
+  dateOfBirth?: string;
+  नागरिकता_नम्बर?: string;
+  citizenshipNumber?: string;
+  जिल्ला?: string;
+  district?: string;
+  पिताको_नाम?: string;
+  fatherName?: string;
+  आमाको_नाम?: string;
+  motherName?: string;
+  ठेगाना?: string;
+  address?: string;
+  लिङ्ग?: string;
+  gender?: string;
+  rawText?: string;
+}
+
+export interface KycDocument {
+  id: string;
+  documentType: KycDocumentType;
+  fileUrl: string;
+  uploadedAt?: string;
+  extractedData?: NepalIdExtractedData | null;
+  isValidNationalId?: boolean | null;
+  extractionStatus?: "pending" | "success" | "failed" | "invalid";
+  extractionError?: string | null;
+}
+
+export interface KycStatusResponse {
+  kycVerified: boolean;
+  status: "pending" | "verified" | "rejected";
+  documents: KycDocument[];
+}
+
+export async function getKycStatus(): Promise<KycStatusResponse | null> {
+  try {
+    const { data } = await api.get<{ kycVerified?: boolean; status: KycStatusResponse["status"]; documents?: KycDocument[] }>("/kyc/status");
+    return {
+      kycVerified: data.kycVerified ?? false,
+      status: data.status ?? "pending",
+      documents: data.documents ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadKycDocument(documentType: KycDocumentType, file: File): Promise<{ success: boolean; message?: string }> {
+  try {
+    const form = new FormData();
+    form.append("documentType", documentType);
+    form.append("document", file);
+    const { data } = await api.post<{ message?: string; status?: string }>("/kyc/upload", form);
+    return { success: true, message: data?.message ?? "Document uploaded. Admin will verify your KYC." };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; error?: string };
+      const msg = body.message ?? body.error;
+      if (msg) return { success: false, message: String(msg) };
+    }
+    if (axios.isAxiosError(err) && err.message) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Upload failed. Check your connection and try again." };
+  }
+}
+
+export async function deleteKycDocument(documentId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await api.delete(`/kyc/documents/${encodeURIComponent(documentId)}`);
+    return { success: true };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      return { success: false, message: body.message ?? "Failed to remove document" };
+    }
+    return { success: false, message: "Failed to remove document" };
+  }
+}
+
 // Seller report (analytics)
 export interface SellerReportProduct {
   id: string;
@@ -932,13 +1094,13 @@ export interface ChatMessage {
   updatedAt: string;
 }
 
-export async function listConversations(): Promise<ChatConversation[]> {
+export async function listConversations(): Promise<ChatConversation[] | null> {
   try {
     const { data } = await api.get<{ status: string; conversations?: ChatConversation[] }>("/chat/conversations");
     if (data.status === "success") return data.conversations ?? [];
     return [];
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -975,6 +1137,24 @@ export async function createConversationByProduct(productId: string): Promise<{ 
   }
 }
 
+export async function createConversationByOffer(offerId: string): Promise<{ success: true; conversation: ChatConversation } | { success: false; error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; message?: string; conversation?: ChatConversation }>("/chat/conversations", { offerId });
+    if (data.status === "success" && data.conversation) return { success: true, conversation: data.conversation };
+    return { success: false, error: (data as { message?: string }).message ?? "Could not start chat" };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; error?: string };
+      const msg = body.message ?? body.error;
+      if (typeof msg === "string" && msg) return { success: false, error: msg };
+    }
+    if (axios.isAxiosError(err) && err.code === "ECONNREFUSED") {
+      return { success: false, error: "Cannot reach server. Check your connection and that the backend is running." };
+    }
+    return { success: false, error: "Could not start chat. Try again." };
+  }
+}
+
 export async function getConversationMessages(
   conversationId: string,
   options?: { limit?: number; before?: string; beforeMessageId?: string }
@@ -998,5 +1178,28 @@ export async function unsendMessage(messageId: string): Promise<boolean> {
     return data.status === "success";
   } catch {
     return false;
+  }
+}
+
+// ——— BazarCoBot ———
+export type BotMessage = { role: "user" | "assistant"; content: string };
+
+export async function chatBot(
+  messages: BotMessage[],
+  options?: { includeContext?: boolean }
+): Promise<{ reply: string } | { error: string }> {
+  try {
+    const { data } = await api.post<{ status: string; reply?: string; message?: string }>("/bot/chat", {
+      messages,
+      includeContext: options?.includeContext !== false,
+    });
+    if (data.status === "success" && typeof data.reply === "string") return { reply: data.reply };
+    return { error: (data as { message?: string }).message ?? "Bot unavailable." };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      return { error: body.message ?? "Something went wrong." };
+    }
+    return { error: "Could not reach the server. Try again." };
   }
 }
