@@ -14,6 +14,7 @@ import {
 } from "../controllers/productController";
 import { addOrUpdateReview, addReaction, uploadReviewImageHandler } from "../controllers/reviewController";
 import { toggleLike } from "../controllers/likeController";
+import { addReply, getReplies } from "../controllers/replyController";
 
 export const productsRouter = Router();
 
@@ -52,5 +53,6 @@ productsRouter.patch("/:id", (req, res, next) => {
   });
 }, updateProduct);
 productsRouter.delete("/:id", deleteProduct);
-productsRouter.patch("/:id/archive", archiveProduct);
+productsRouter.post("/reviews/:reviewId/replies", addReply);
+productsRouter.get("/reviews/:reviewId/replies", getReplies); productsRouter.patch("/:id/archive", archiveProduct);
 productsRouter.patch("/:id/unarchive", unarchiveProduct);
