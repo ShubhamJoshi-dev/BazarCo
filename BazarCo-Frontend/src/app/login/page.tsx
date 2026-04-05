@@ -19,14 +19,8 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
-    if (!password) {
-      setError("Password is required");
-      return;
-    }
+    if (!email.trim()) { setError("Email is required"); return; }
+    if (!password) { setError("Password is required"); return; }
     setLoading(true);
     const result = await authLogin(email.trim(), password);
     setLoading(false);
@@ -41,14 +35,18 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Sign in as a Dev" subtitle="Enter your credentials to continue">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="rounded-lg bg-[var(--brand-red)]/15 border border-[var(--brand-red)]/40 px-4 py-3 text-sm text-[var(--brand-red)]">
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-[var(--brand-red)]/12 border border-[var(--brand-red)]/35 px-4 py-3 text-sm text-[var(--brand-red)]"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
         <div>
-          <label htmlFor="login-email" className="block text-sm font-medium text-neutral-300 mb-1.5">
+          <label htmlFor="login-email" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
             Email
           </label>
           <input
@@ -58,12 +56,12 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             disabled={loading}
-            className="w-full rounded-xl border border-neutral-600 bg-neutral-900/80 px-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 disabled:opacity-60"
+            className="clay-input w-full px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--brand-muted)] disabled:opacity-60"
             placeholder="you@example.com"
           />
         </div>
         <div>
-          <label htmlFor="login-password" className="block text-sm font-medium text-neutral-300 mb-1.5">
+          <label htmlFor="login-password" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
             Password
           </label>
           <input
@@ -73,14 +71,14 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             disabled={loading}
-            className="w-full rounded-xl border border-neutral-600 bg-neutral-900/80 px-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 disabled:opacity-60"
+            className="clay-input w-full px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--brand-muted)] disabled:opacity-60"
             placeholder="••••••••"
           />
         </div>
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm text-[var(--brand-blue)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] rounded"
+            className="text-sm font-medium text-[var(--brand-blue)] hover:underline focus:outline-none rounded"
           >
             Forgot password?
           </Link>
@@ -88,13 +86,20 @@ export default function LoginPage() {
         <motion.button
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl bg-[var(--brand-red)] py-3 font-semibold text-white hover:bg-[var(--brand-red)]/90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-red)] focus:ring-offset-2 focus:ring-offset-[var(--brand-black)] disabled:opacity-60 disabled:cursor-not-allowed"
+          className="clay-btn-red w-full py-3.5 text-base"
           whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
+          whileTap={{ scale: 0.98 }}
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Signing in…" : "Sign in"}
         </motion.button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-[var(--brand-muted)]">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-[var(--brand-blue)] font-semibold hover:underline">
+          Create one
+        </Link>
+      </p>
     </AuthLayout>
   );
 }

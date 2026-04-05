@@ -78,11 +78,12 @@ function isAuthSuccess(data: AuthResponse): data is AuthSuccessResponse {
   return data.status === "success" && "token" in data;
 }
 
-export async function authSignup(email: string, password: string, name?: string): Promise<AuthResponse> {
+export async function authSignup(email: string, password: string, name?: string, role?: "buyer" | "seller"): Promise<AuthResponse> {
   try {
     const { data } = await api.post<AuthResponse>("/auth/signup", {
       email: email.trim(),
       password,
+      role: role ?? "buyer",
       ...(name?.trim() ? { name: name.trim() } : {}),
     });
     if (isAuthSuccess(data)) setStoredToken(data.token);
@@ -278,6 +279,9 @@ export async function browseProducts(params: {
   tags?: string[];
   page?: number;
   limit?: number;
+  sortBy?: "newest" | "price-asc" | "price-desc" | "name-asc";
+  minPrice?: number;
+  maxPrice?: number;
 }): Promise<{
   products: Product[];
   categories: Category[];
@@ -413,12 +417,15 @@ export interface ProductReviewReply {
   userId: string;
   userName: string;
   parentId?: string;
+  rating?: number;
   comment?: string;
   imageUrls: string[];
   createdAt: string;
   likeCount: number;
   dislikeCount: number;
   userReaction: "like" | "dislike" | null;
+  /** Nested thread (optional; used when rendering recursive review cards). */
+  replies?: ProductReviewReply[];
 }
 
 export interface ProductReview {
@@ -908,12 +915,27 @@ export interface NepalIdExtractedData {
   rawText?: string;
 }
 
+/** Company registration card / PAN card extracted fields */
+export interface CompanyCardExtractedData {
+  companyName?: string;
+  registrationNumber?: string;
+  panNumber?: string;
+  vatNumber?: string;
+  companyType?: string;
+  address?: string;
+  registeredDate?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  ownerName?: string;
+  rawText?: string;
+}
+
 export interface KycDocument {
   id: string;
   documentType: KycDocumentType;
   fileUrl: string;
   uploadedAt?: string;
-  extractedData?: NepalIdExtractedData | null;
+  extractedData?: NepalIdExtractedData | CompanyCardExtractedData | null;
   isValidNationalId?: boolean | null;
   extractionStatus?: "pending" | "success" | "failed" | "invalid";
   extractionError?: string | null;

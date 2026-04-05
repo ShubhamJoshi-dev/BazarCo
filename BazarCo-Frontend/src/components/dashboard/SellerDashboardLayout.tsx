@@ -3,17 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, User, Package, BarChart3, ShoppingBag, HandCoins, MessageCircle, ShieldCheck, TrendingUp, FileBarChart } from "lucide-react";
+import { LayoutDashboard, User, Package, ShoppingBag, HandCoins, MessageCircle, ShieldCheck, TrendingUp, FileBarChart, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
-export function SellerDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SellerDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -26,74 +23,93 @@ export function SellerDashboardLayout({
   }
 
   const nav = [
-    { href: "/dashboard", label: t("dashboard"), Icon: LayoutDashboard },
+    { href: "/dashboard",           label: t("dashboard"), Icon: LayoutDashboard },
     { href: "/dashboard/analytics", label: t("analytics"), Icon: TrendingUp },
-    { href: "/dashboard/report", label: t("reports"), Icon: FileBarChart },
-    { href: "/dashboard/orders", label: t("orders"), Icon: ShoppingBag },
-    { href: "/dashboard/offers", label: t("offers"), Icon: HandCoins },
-    { href: "/dashboard/chat", label: t("chat"), Icon: MessageCircle },
-    { href: "/dashboard/products", label: t("products"), Icon: Package },
-    { href: "/dashboard/kyc", label: t("kyc"), Icon: ShieldCheck },
-    { href: "/dashboard/profile", label: t("profile"), Icon: User },
+    { href: "/dashboard/report",    label: t("reports"),   Icon: FileBarChart },
+    { href: "/dashboard/orders",    label: t("orders"),    Icon: ShoppingBag },
+    { href: "/dashboard/offers",    label: t("offers"),    Icon: HandCoins },
+    { href: "/dashboard/chat",      label: t("chat"),      Icon: MessageCircle },
+    { href: "/dashboard/products",  label: t("products"),  Icon: Package },
+    { href: "/dashboard/kyc",       label: t("kyc"),       Icon: ShieldCheck },
+    { href: "/dashboard/profile",   label: t("profile"),   Icon: User },
   ];
 
   return (
     <div className="min-h-screen dashboard-bg flex">
-      <aside className="w-56 border-r border-white/10 flex flex-col fixed h-full bg-[var(--brand-black)]/80 backdrop-blur">
-        <div className="p-4 border-b border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="BazarCo" width={100} height={42} className="h-8 w-auto" />
-          </Link>
-        </div>
-        <nav className="p-3 flex flex-col gap-1">
-          {nav.map((item) => {
-            const active = pathname === item.href;
-            const Icon = item.Icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  active
-                    ? "bg-[var(--brand-red)]/20 text-[var(--brand-red)] border border-[var(--brand-red)]/40"
-                    : "text-neutral-400 hover:bg-white/5 hover:text-[var(--brand-white)]"
-                }`}
-              >
-                <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-auto p-3 border-t border-white/10 space-y-2">
-          <div className="flex items-center gap-2 px-3">
-            <LocaleSwitcher />
-            <ThemeSwitcher />
+      {/* Clay sidebar */}
+      <aside className="w-60 fixed h-full flex flex-col" style={{ padding: "12px" }}>
+        <div
+          className="clay-card flex flex-col h-full overflow-hidden"
+          style={{ borderRadius: "22px" }}
+        >
+          {/* Logo area */}
+          <div className="p-4 pb-3 border-b border-[var(--brand-border)]">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <Image src="/logo.png" alt="BazarCo" width={100} height={42} className="h-8 w-auto" />
+            </Link>
+            {/* Seller badge */}
+            <div className="mt-3 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--brand-red)] shadow-[0_0_6px_var(--brand-red)]" />
+              <span className="text-xs font-semibold text-[var(--brand-muted)]">{t("sellerAccount")}</span>
+            </div>
           </div>
-          <p className="text-xs text-neutral-500 px-3 mb-2">{t("sellerAccount")}</p>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-neutral-400 hover:bg-[var(--brand-red)]/10 hover:text-[var(--brand-red)] transition-colors"
-          >
-            {t("logout")}
-          </button>
+
+          {/* Nav */}
+          <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto scrollbar-hide">
+            {nav.map((item) => {
+              const active = pathname === item.href;
+              const Icon = item.Icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`clay-sidebar-link flex items-center gap-2.5 px-3 py-2.5 text-sm transition-all ${active ? "active" : ""}`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Footer */}
+          <div className="p-3 border-t border-[var(--brand-border)] space-y-3">
+            <div className="flex items-center gap-2 px-1 flex-wrap">
+              <LocaleSwitcher />
+              <ThemeSwitcher />
+              <CurrencySwitcher />
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="clay-sidebar-link flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-[var(--brand-muted)] hover:text-[var(--brand-red)]"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {t("logout")}
+            </button>
+          </div>
         </div>
       </aside>
-      <main className="flex-1 ml-56">
-        <header className="sticky top-0 z-10 border-b border-white/10 bg-[var(--brand-black)]/80 backdrop-blur px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[var(--brand-white)]">
-            {t("sellerDashboard")}
-          </h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--brand-white)]">
-              {user?.name || user?.email}
-            </span>
-            <span className="rounded-full bg-[var(--brand-red)]/20 text-[var(--brand-red)] border border-[var(--brand-red)]/40 px-2.5 py-0.5 text-xs font-medium">
-              {t("seller")}
-            </span>
+
+      {/* Main content */}
+      <main className="flex-1 ml-[72px]" style={{ marginLeft: "252px" }}>
+        {/* Clay top bar */}
+        <div className="sticky top-0 z-10 px-4 pt-3">
+          <div
+            className="clay-card px-6 py-4 flex items-center justify-between"
+            style={{ borderRadius: "18px" }}
+          >
+            <h1 className="text-base font-bold text-[var(--foreground)]">
+              {t("sellerDashboard")}
+            </h1>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--foreground)] font-medium">
+                {user?.name || user?.email}
+              </span>
+              <span className="clay-badge-red">{t("seller")}</span>
+            </div>
           </div>
-        </header>
+        </div>
         <div className="p-6">{children}</div>
       </main>
     </div>

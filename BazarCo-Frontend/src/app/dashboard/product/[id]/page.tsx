@@ -1,128 +1,403 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  ImageIcon,
-  Star,
-  Heart,
-  ShoppingCart,
-  MessageSquare,
-  Send,
-  HandCoins,
-  Loader2,
-  ShieldCheck,
-  ThumbsUp,
-  ThumbsDown,
-  ImagePlus,
-  X,
-  Reply,
+  ArrowLeft, ImageIcon, Star, Heart, ShoppingCart, MessageSquare,
+  HandCoins, Loader2, ShieldCheck, ThumbsUp, ThumbsDown,
+  ImagePlus, X, Reply, Send, Sparkles, CheckCircle2, Package,
 } from "lucide-react";
 import {
-  getProductById,
-  addProductReview,
-  uploadReviewImage,
-  addReviewReaction,
-  toggleProductLike,
-  addToCart,
-  createOffer,
-  listOffers,
+  getProductById, addProductReview, uploadReviewImage, addReviewReaction,
+  toggleProductLike, addToCart, createOffer, listOffers,
   createConversationByProduct,
-  type ProductDetailResponse,
-  type ProductReview,
+  type ProductDetailResponse, type ProductReview, type ProductReviewReply,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import { Toast } from "@/components/Toast";
-import type { Product } from "@/types/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
+/* ─── Avatar gradient ── */
+function Avatar({ name, size = 10, colors }: { name: string; size?: number; colors: [string, string] }) {
+  const initials = (name || "U").slice(0, 2).toUpperCase();
+  const sizeClass = size <= 8 ? "w-8 h-8" : "w-10 h-10";
+  return (
+    <div
+      className={`${sizeClass} rounded-full flex items-center justify-center font-bold text-white shrink-0 select-none`}
+      style={{ background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`, fontSize: size <= 8 ? 11 : 13, boxShadow: `0 2px 10px ${colors[0]}50` }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+const AVATAR_PALETTE: [string, string][] = [
+  ["#4da6ff", "#7c3aed"], ["#f59e0b", "#ef4444"], ["#22c55e", "#0ea5e9"],
+  ["#ec4899", "#8b5cf6"], ["#f97316", "#eab308"], ["#06b6d4", "#6366f1"],
+];
+function avatarColors(id: string): [string, string] {
+  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+
+/* ─── Interactive star picker ── */
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const labels = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((r) => {
+          const filled = (hover || value) >= r;
+          return (
+            <motion.button
+              key={r} type="button"
+              onClick={() => onChange(r)}
+              onMouseEnter={() => setHover(r)}
+              onMouseLeave={() => setHover(0)}
+              whileHover={{ scale: 1.3, y: -3 }}
+              whileTap={{ scale: 0.85 }}
+              transition={{ type: "spring", stiffness: 500, damping: 18 }}
+              className="focus:outline-none"
+            >
+              <Star className={`w-8 h-8 transition-colors duration-150 ${filled ? "text-amber-400 fill-amber-400" : "text-[var(--brand-border)]"}`} />
+            </motion.button>
+          );
+        })}
+      </div>
+      <AnimatePresence mode="wait">
+        {(hover || value) > 0 && (
+          <motion.span
+            key={hover || value}
+            initial={{ opacity: 0, y: 4, scale: 0.85 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 500, damping: 22 }}
+            className="text-sm font-bold text-amber-400"
+          >
+            {labels[hover || value]}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Rating bar ── */
+function RatingBar({ star, count, total }: { star: number; count: number; total: number }) {
+  const ref = useRef(null);
+  const pct = total > 0 ? (count / total) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="text-xs text-[var(--brand-muted)] w-3 text-right">{star}</span>
+      <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+      <div ref={ref} className="flex-1 h-1.5 rounded-full bg-[var(--brand-border)] overflow-hidden">
+        <motion.div
+          className="h-full rounded-full bg-amber-400"
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+      <span className="text-xs text-[var(--brand-muted)] w-4">{count}</span>
+    </div>
+  );
+}
+
+/* ─── Review card ── */
+function ReviewCard({
+  rev, depth = 0, user, productId, onReaction, onReply, reactionLoadingId,
+}: {
+  rev: ProductReview | ProductReviewReply; depth?: number; user: { id: string } | null; productId: string;
+  onReaction: (id: string, type: "like" | "dislike") => void;
+  onReply: (parentId: string, comment: string, images: string[]) => Promise<void>;
+  reactionLoadingId: string | null;
+}) {
+  const [replying, setReplying]     = useState(false);
+  const [replyText, setReplyText]   = useState("");
+  const [replyImgs, setReplyImgs]   = useState<string[]>([]);
+  const [replyImgUploading, setReplyImgUploading] = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [liked, setLiked]           = useState(rev.userReaction === "like");
+  const [disliked, setDisliked]     = useState(rev.userReaction === "dislike");
+  const [likeCount, setLikeCount]   = useState(rev.likeCount ?? 0);
+  const [dislikeCount, setDislikeCount] = useState(rev.dislikeCount ?? 0);
+  const colors = avatarColors(rev.id);
+  const isReply = depth > 0;
+
+  const submitReply = async () => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    await onReply(rev.id, replyText, replyImgs);
+    setSending(false);
+    setReplying(false);
+    setReplyText("");
+    setReplyImgs([]);
+  };
+
+  const react = async (type: "like" | "dislike") => {
+    const wasLiked    = liked;
+    const wasDisliked = disliked;
+    if (type === "like") {
+      setLiked(!wasLiked); setDisliked(false);
+      setLikeCount((n) => n + (wasLiked ? -1 : 1));
+      if (wasDisliked) setDislikeCount((n) => n - 1);
+    } else {
+      setDisliked(!wasDisliked); setLiked(false);
+      setDislikeCount((n) => n + (wasDisliked ? -1 : 1));
+      if (wasLiked) setLikeCount((n) => n - 1);
+    }
+    onReaction(rev.id, type);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 340, damping: 28 }}
+      className={isReply ? "ml-10 border-l-2 border-[var(--brand-border)] pl-4" : ""}
+    >
+      <div className={`rounded-2xl ${isReply ? "bg-[var(--card-bg)]/50" : "clay-card"} p-4`}>
+        {/* Header row */}
+        <div className="flex items-start gap-3">
+          <Avatar name={rev.userName || "U"} size={isReply ? 8 : 10} colors={colors} />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-sm text-[var(--foreground)]">{rev.userName || "Anonymous"}</span>
+              {typeof rev.rating === "number" && rev.rating > 0 && (
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <Star key={r} className={`w-3 h-3 ${(rev.rating ?? 0) >= r ? "text-amber-400 fill-amber-400" : "text-[var(--brand-border)]"}`} />
+                  ))}
+                </div>
+              )}
+              <span className="text-[11px] text-[var(--brand-muted)] ml-auto">
+                {new Date(rev.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+              </span>
+            </div>
+
+            {/* Comment */}
+            {rev.comment && (
+              <p className="text-sm text-[var(--foreground)]/90 leading-relaxed mt-1.5 mb-3">{rev.comment}</p>
+            )}
+
+            {/* Image grid */}
+            {(rev.imageUrls?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {rev.imageUrls!.map((url) => (
+                  <motion.div key={url} whileHover={{ scale: 1.05 }}
+                    className="relative w-20 h-20 rounded-xl overflow-hidden border border-[var(--brand-border)] cursor-pointer"
+                  >
+                    <Image src={url} alt="" fill className="object-cover" sizes="80px" />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Like */}
+              <motion.button
+                type="button" onClick={() => react("like")}
+                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all ${
+                  liked
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                    : "bg-transparent text-[var(--brand-muted)] border-[var(--brand-border)] hover:border-emerald-500/40 hover:text-emerald-400"
+                }`}
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+                <AnimatePresence mode="wait">
+                  <motion.span key={likeCount} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 6, opacity: 0 }} transition={{ duration: 0.15 }}>
+                    {likeCount}
+                  </motion.span>
+                </AnimatePresence>
+              </motion.button>
+
+              {/* Dislike */}
+              <motion.button
+                type="button" onClick={() => react("dislike")}
+                whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all ${
+                  disliked
+                    ? "bg-[var(--brand-red)]/20 text-[var(--brand-red)] border-[var(--brand-red)]/40"
+                    : "bg-transparent text-[var(--brand-muted)] border-[var(--brand-border)] hover:border-[var(--brand-red)]/40 hover:text-[var(--brand-red)]"
+                }`}
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+                <AnimatePresence mode="wait">
+                  <motion.span key={dislikeCount} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 6, opacity: 0 }} transition={{ duration: 0.15 }}>
+                    {dislikeCount}
+                  </motion.span>
+                </AnimatePresence>
+              </motion.button>
+
+              {/* Reply */}
+              {user && !isReply && (
+                <motion.button
+                  type="button" onClick={() => setReplying((r) => !r)}
+                  whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all ${
+                    replying
+                      ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] border-[var(--brand-blue)]/40"
+                      : "bg-transparent text-[var(--brand-muted)] border-[var(--brand-border)] hover:border-[var(--brand-blue)]/40 hover:text-[var(--brand-blue)]"
+                  }`}
+                >
+                  <Reply className="w-3.5 h-3.5" /> Reply
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Inline reply composer */}
+        <AnimatePresence>
+          {replying && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ type: "spring", stiffness: 360, damping: 28 }}
+              className="overflow-hidden"
+            >
+              <div className="flex gap-3 items-start pt-3 border-t border-[var(--brand-border)]">
+                {user && <Avatar name={user?.id || "U"} size={8} colors={avatarColors(user?.id || "u")} />}
+                <div className="flex-1 space-y-2">
+                  <div className="relative">
+                    <input
+                      type="text" value={replyText} onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(); } }}
+                      placeholder={`Reply to ${rev.userName}…`}
+                      className="w-full clay-input px-4 py-2.5 text-sm pr-12 text-[var(--foreground)] placeholder:text-[var(--brand-muted)]"
+                    />
+                    <motion.button
+                      type="button" onClick={submitReply} disabled={sending || !replyText.trim()}
+                      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--brand-blue)] text-white disabled:opacity-40"
+                    >
+                      {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    </motion.button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className={`inline-flex items-center gap-1.5 text-xs text-[var(--brand-muted)] cursor-pointer hover:text-[var(--foreground)] transition-colors px-2.5 py-1.5 rounded-xl border border-[var(--brand-border)] hover:border-[var(--brand-blue)]/40 ${replyImgs.length >= 3 || replyImgUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <ImagePlus className="w-3.5 h-3.5" /> {replyImgUploading ? "Uploading…" : "Photo"}
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        disabled={replyImgs.length >= 3 || replyImgUploading}
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files?.length || !productId) return;
+                          const room = 3 - replyImgs.length;
+                          if (room <= 0) return;
+                          setReplyImgUploading(true);
+                          for (let i = 0; i < Math.min(files.length, room); i++) {
+                            const res = await uploadReviewImage(productId, files[i]);
+                            if (res?.url) setReplyImgs((p) => [...p, res.url].slice(0, 3));
+                          }
+                          setReplyImgUploading(false);
+                          e.target.value = "";
+                        }} />
+                    </label>
+                    <button type="button" onClick={() => { setReplying(false); setReplyText(""); }}
+                      className="text-xs text-[var(--brand-muted)] hover:text-[var(--foreground)] transition-colors px-2">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Nested replies */}
+      {(rev.replies?.length ?? 0) > 0 && (
+        <motion.div
+          className="mt-2 space-y-2"
+          initial="hidden"
+          animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+        >
+          {(rev.replies ?? []).map((rep) => (
+            <ReviewCard key={rep.id} rev={rep} depth={depth + 1} user={user}
+              productId={productId} onReaction={onReaction} onReply={onReply}
+              reactionLoadingId={reactionLoadingId} />
+          ))}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+/* ─── Page ── */
 export default function ProductDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = typeof params.id === "string" ? params.id : "";
+  const params  = useParams();
+  const { formatPrice } = useCurrency();
+  const router  = useRouter();
+  const id      = typeof params.id === "string" ? params.id : "";
   const { user } = useAuth();
-  const t = useTranslations("offers");
-  const tChat = useTranslations("chat");
-  const tDashboard = useTranslations("dashboard");
-  const [data, setData] = useState<ProductDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState("");
-  const [reviewImageUrls, setReviewImageUrls] = useState<string[]>([]);
-  const [reviewImageUploading, setReviewImageUploading] = useState(false);
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [replyComment, setReplyComment] = useState("");
-  const [replyImageUrls, setReplyImageUrls] = useState<string[]>([]);
-  const [submittingReply, setSubmittingReply] = useState(false);
+  const t       = useTranslations("offers");
+  const tChat   = useTranslations("chat");
+  const tDB     = useTranslations("dashboard");
+
+  const [data,              setData]              = useState<ProductDetailResponse | null>(null);
+  const [loading,           setLoading]           = useState(true);
+  const [liked,             setLiked]             = useState(false);
+  const [likeCount,         setLikeCount]         = useState(0);
+  const [reviewRating,      setReviewRating]      = useState(0);
+  const [reviewComment,     setReviewComment]     = useState("");
+  const [reviewImageUrls,   setReviewImageUrls]   = useState<string[]>([]);
+  const [reviewImgUploading,setReviewImgUploading]= useState(false);
+  const [submittingReview,  setSubmittingReview]  = useState(false);
   const [reactionLoadingId, setReactionLoadingId] = useState<string | null>(null);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [cartQty, setCartQty] = useState(1);
-  const [cartToast, setCartToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
-  const [actionToast, setActionToast] = useState<{ show: boolean; message: string; isError?: boolean }>({ show: false, message: "" });
-  const [myOfferOnProduct, setMyOfferOnProduct] = useState<{ id: string; status: string } | null>(null);
-  const [offerPrice, setOfferPrice] = useState("");
-  const [offerMessage, setOfferMessage] = useState("");
-  const [submittingOffer, setSubmittingOffer] = useState(false);
-  const [startingChat, setStartingChat] = useState(false);
+  const [addingToCart,      setAddingToCart]      = useState(false);
+  const [cartQty,           setCartQty]           = useState(1);
+  const [cartToast,         setCartToast]         = useState({ show: false, message: "" });
+  const [actionToast,       setActionToast]       = useState({ show: false, message: "", isError: false });
+  const [myOffer,           setMyOffer]           = useState<{ id: string; status: string } | null>(null);
+  const [offerPrice,        setOfferPrice]        = useState("");
+  const [offerMessage,      setOfferMessage]      = useState("");
+  const [submittingOffer,   setSubmittingOffer]   = useState(false);
+  const [startingChat,      setStartingChat]      = useState(false);
 
   const fetchProduct = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     const res = await getProductById(id);
     setData(res);
-    if (res) {
-      setLiked(res.userLiked);
-      setLikeCount(res.likeCount);
-    }
+    if (res) { setLiked(res.userLiked); setLikeCount(res.likeCount); }
     setLoading(false);
   }, [id]);
 
-  useEffect(() => {
-    fetchProduct();
-  }, [fetchProduct]);
+  useEffect(() => { fetchProduct(); }, [fetchProduct]);
 
   useEffect(() => {
-    if (!id || !user || !data?.product || user.id === data.product.sellerId) {
-      setMyOfferOnProduct(null);
-      return;
-    }
+    if (!id || !user || !data?.product || user.id === data.product.sellerId) { setMyOffer(null); return; }
     let cancelled = false;
     (async () => {
       const list = await listOffers({ asSeller: false });
       if (cancelled) return;
-      const existing = list.find((o) => o.productId === id);
-      setMyOfferOnProduct(existing ? { id: existing.id, status: existing.status } : null);
+      const ex = list.find((o) => o.productId === id);
+      setMyOffer(ex ? { id: ex.id, status: ex.status } : null);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [id, user?.id, data?.product?.sellerId]);
 
   const handleSubmitOffer = async () => {
     if (!id) return;
     const price = parseFloat(offerPrice);
-    if (Number.isNaN(price) || price < 0) {
-      setActionToast({ show: true, message: "Please enter a valid price.", isError: true });
-      return;
-    }
+    if (Number.isNaN(price) || price < 0) { setActionToast({ show: true, message: "Enter a valid price.", isError: true }); return; }
     setSubmittingOffer(true);
     const result = await createOffer(id, price, offerMessage || undefined);
     setSubmittingOffer(false);
     if (result.success) {
-      setMyOfferOnProduct({ id: result.offer.id, status: result.offer.status });
-      setOfferPrice("");
-      setOfferMessage("");
-      setActionToast({ show: true, message: "Offer sent! Check Offers for updates." });
-    } else {
-      setActionToast({ show: true, message: result.error, isError: true });
-    }
+      setMyOffer({ id: result.offer.id, status: result.offer.status });
+      setOfferPrice(""); setOfferMessage("");
+      setActionToast({ show: true, message: "Offer sent!", isError: false });
+    } else { setActionToast({ show: true, message: result.error, isError: true }); }
   };
 
   const handleMessageSeller = async () => {
@@ -130,22 +405,14 @@ export default function ProductDetailPage() {
     setStartingChat(true);
     const result = await createConversationByProduct(id);
     setStartingChat(false);
-    if (result.success) {
-      const convId = result.conversation.id;
-      if (convId) router.push(`/dashboard/chat/${convId}`);
-      else setActionToast({ show: true, message: "Chat started. Open Chat from the menu.", isError: false });
-    } else {
-      setActionToast({ show: true, message: result.error, isError: true });
-    }
+    if (result.success) { if (result.conversation.id) router.push(`/dashboard/chat/${result.conversation.id}`); }
+    else setActionToast({ show: true, message: result.error, isError: true });
   };
 
   const handleLike = async () => {
     if (!id) return;
     const result = await toggleProductLike(id);
-    if (result) {
-      setLiked(result.liked);
-      setLikeCount(result.likeCount);
-    }
+    if (result) { setLiked(result.liked); setLikeCount(result.likeCount); }
   };
 
   const handleSubmitReview = async () => {
@@ -153,64 +420,34 @@ export default function ProductDetailPage() {
     setSubmittingReview(true);
     const ok = await addProductReview(id, reviewRating, reviewComment || undefined, undefined, reviewImageUrls.length ? reviewImageUrls : undefined);
     setSubmittingReview(false);
-    if (ok?.success) {
-      setReviewRating(0);
-      setReviewComment("");
-      setReviewImageUrls([]);
-      fetchProduct();
-    }
+    if (ok?.success) { setReviewRating(0); setReviewComment(""); setReviewImageUrls([]); fetchProduct(); }
   };
 
-  const handleReplySubmit = async (parentId: string) => {
-    if (!id || !replyComment.trim()) return;
-    setSubmittingReply(true);
-    const ok = await addProductReview(id, 0, replyComment.trim(), parentId, replyImageUrls.length ? replyImageUrls : undefined);
-    setSubmittingReply(false);
-    if (ok?.success) {
-      setReplyingToId(null);
-      setReplyComment("");
-      setReplyImageUrls([]);
-      fetchProduct();
-    }
+  const handleReplySubmit = async (parentId: string, comment: string, images: string[]) => {
+    if (!id || !comment.trim()) return;
+    const ok = await addProductReview(id, 0, comment.trim(), parentId, images.length ? images : undefined);
+    if (ok?.success) fetchProduct();
   };
 
   const handleReaction = async (reviewId: string, type: "like" | "dislike") => {
     if (!id) return;
     setReactionLoadingId(reviewId);
-    const result = await addReviewReaction(id, reviewId, type);
+    await addReviewReaction(id, reviewId, type);
     setReactionLoadingId(null);
-    if (result && data) {
-      setData({
-        ...data,
-        reviews: data.reviews.map((r) => {
-          if (r.id === reviewId) {
-            return { ...r, likeCount: result.likeCount, dislikeCount: result.dislikeCount, userReaction: result.userReaction };
-          }
-          const replyIdx = r.replies?.findIndex((rep) => rep.id === reviewId);
-          if (replyIdx !== undefined && replyIdx >= 0 && r.replies) {
-            const replies = [...r.replies];
-            replies[replyIdx] = { ...replies[replyIdx], likeCount: result.likeCount, dislikeCount: result.dislikeCount, userReaction: result.userReaction };
-            return { ...r, replies };
-          }
-          return r;
-        }),
-      });
-    }
+    fetchProduct();
   };
 
-  const handleReviewImageSelect = async (e: React.ChangeEvent<HTMLInputElement>, isReply: boolean) => {
+  const handleReviewImageSelect = async (e: React.ChangeEvent<HTMLInputElement>, setUrls: React.Dispatch<React.SetStateAction<string[]>>) => {
     const files = e.target.files;
     if (!files?.length || !id) return;
-    const setUrls = isReply ? setReplyImageUrls : setReviewImageUrls;
-    const max = 3;
-    if (!isReply) setReviewImageUploading(true);
+    setReviewImgUploading(true);
     const urls: string[] = [];
-    for (let i = 0; i < Math.min(files.length, max); i++) {
+    for (let i = 0; i < Math.min(files.length, 3); i++) {
       const res = await uploadReviewImage(id, files[i]);
       if (res?.url) urls.push(res.url);
     }
-    setUrls((prev) => [...prev, ...urls].slice(0, max));
-    if (!isReply) setReviewImageUploading(false);
+    setUrls((prev) => [...prev, ...urls].slice(0, 3));
+    setReviewImgUploading(false);
     e.target.value = "";
   };
 
@@ -219,36 +456,33 @@ export default function ProductDetailPage() {
     setAddingToCart(true);
     const result = await addToCart(id, cartQty);
     setAddingToCart(false);
-    if (result.success) {
-      const name = result.productName ?? data.product.name;
-      setCartToast({ show: true, message: `${name}${cartQty > 1 ? ` × ${cartQty}` : ""} added to cart` });
-    }
+    if (result.success) setCartToast({ show: true, message: `${result.productName ?? data.product.name} added to cart` });
   };
 
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <div className="h-10 w-10 rounded-full border-2 border-[var(--brand-blue)]/30 border-t-[var(--brand-blue)] animate-spin" />
-        <p className="text-neutral-400 text-sm">Loading product…</p>
+      <div className="space-y-6">
+        <div className="h-5 w-28 rounded-full bg-[var(--brand-border)] loading-shimmer-bar opacity-40" />
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div className="aspect-square clay-card loading-shimmer-bar opacity-30" style={{ padding: 0 }} />
+          <div className="space-y-4 py-4">
+            {[180, 100, 60, 140, 80, 200].map((w, i) => (
+              <div key={i} className="h-5 rounded-xl bg-[var(--brand-border)] loading-shimmer-bar opacity-30" style={{ width: w }} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center"
-      >
-        <p className="text-[var(--brand-white)] font-medium mb-1">Product not found</p>
-        <p className="text-sm text-neutral-400 mb-6">This product may have been removed or the link is invalid.</p>
-        <Link
-          href="/dashboard/browse"
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-blue)]/20 border border-[var(--brand-blue)]/40 px-4 py-2.5 text-sm font-medium text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/30 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Browse
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="clay-card p-16 text-center">
+        <Package className="mx-auto w-12 h-12 text-[var(--brand-muted)]/30 mb-4" />
+        <p className="font-bold text-[var(--foreground)] mb-5">Product not found</p>
+        <Link href="/dashboard/browse" className="clay-btn-blue px-5 py-2.5 text-sm inline-flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" /> Back to Browse
         </Link>
       </motion.div>
     );
@@ -256,278 +490,212 @@ export default function ProductDetailPage() {
 
   const { product, reviews, reviewCount, averageRating, sellerKycVerified } = data;
 
-  return (
-    <div className="space-y-8">
-      <Toast
-        message={cartToast.message}
-        visible={cartToast.show}
-        onDismiss={() => setCartToast((p) => ({ ...p, show: false }))}
-        duration={3500}
-      />
-      <Toast
-        message={actionToast.message}
-        visible={actionToast.show}
-        onDismiss={() => setActionToast((p) => ({ ...p, show: false }))}
-        duration={actionToast.isError ? 5000 : 3500}
-        variant={actionToast.isError ? "error" : "success"}
-      />
+  /* Rating distribution */
+  const ratingDist: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  reviews.forEach((r) => { if (r.rating && r.rating >= 1 && r.rating <= 5) ratingDist[r.rating]++; });
 
-      <motion.div
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Link
-          href="/dashboard/browse"
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/[0.08] hover:border-white/20 transition-all duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" />
+  const pageVariants = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+  const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 320, damping: 26 } } };
+
+  return (
+    <motion.div className="space-y-8" variants={pageVariants} initial="hidden" animate="show">
+      <Toast message={cartToast.message} visible={cartToast.show} onDismiss={() => setCartToast((p) => ({ ...p, show: false }))} duration={3500} />
+      <Toast message={actionToast.message} visible={actionToast.show} onDismiss={() => setActionToast((p) => ({ ...p, show: false }))} duration={actionToast.isError ? 5000 : 3500} variant={actionToast.isError ? "error" : "success"} />
+
+      {/* Back */}
+      <motion.div variants={{ hidden: { opacity: 0, x: -12 }, show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 400 } } }}>
+        <Link href="/dashboard/browse"
+          className="inline-flex items-center gap-2 text-sm text-[var(--brand-muted)] hover:text-[var(--foreground)] transition-colors group">
+          <motion.span whileHover={{ x: -3 }} transition={{ type: "spring", stiffness: 500 }}>
+            <ArrowLeft className="w-4 h-4" />
+          </motion.span>
           Back to Browse
         </Link>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="grid gap-8 lg:gap-12 lg:grid-cols-[1fr_1fr]"
-      >
-        {/* Product image */}
+      {/* ── Product hero ── */}
+      <motion.div variants={fadeUp} className="grid gap-8 lg:gap-12 lg:grid-cols-[1fr_1fr]">
+
+        {/* Image */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.08, duration: 0.4 }}
-          className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_24px_48px_-12px_rgba(0,0,0,0.4)] group"
+          transition={{ delay: 0.08, type: "spring", stiffness: 280, damping: 24 }}
+          className="relative aspect-square clay-card overflow-hidden group cursor-zoom-in"
+          style={{ padding: 0 }}
+          whileHover={{ scale: 1.01 }}
         >
           {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              priority
-            />
+            <Image src={product.imageUrl} alt={product.name} fill
+              className="object-cover transition-transform duration-700 group-hover:scale-[1.08]"
+              sizes="(max-width: 1024px) 100vw, 50vw" priority />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-neutral-600">
+            <div className="absolute inset-0 flex items-center justify-center text-[var(--brand-muted)]">
               <ImageIcon className="w-24 h-24" />
             </div>
           )}
+          {/* Category overlay */}
+          {product.category && (
+            <div className="absolute top-4 left-4">
+              <motion.span initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="clay-badge-blue text-xs font-bold px-3 py-1.5"
+              >
+                {product.category}
+              </motion.span>
+            </div>
+          )}
+          {/* Like button on image */}
+          <motion.button
+            type="button" onClick={handleLike}
+            whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.85 }}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.4 }}>
+              <Heart className={`w-5 h-5 transition-colors ${liked ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : "text-white"}`} />
+            </motion.span>
+          </motion.button>
         </motion.div>
 
-        {/* Product details */}
-        <div className="flex flex-col gap-6 lg:gap-7">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {product.category && (
-                <motion.span
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.12 }}
-                  className="inline-block rounded-full bg-[var(--brand-blue)]/15 text-[var(--brand-blue)] px-3 py-1 text-xs font-medium border border-[var(--brand-blue)]/30"
-                >
-                  {product.category}
-                </motion.span>
-              )}
-              {sellerKycVerified && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.14 }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 px-3 py-1.5 text-xs font-semibold border border-emerald-500/40"
-                >
-                  <ShieldCheck className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-                  {tDashboard("verifiedSeller")}
-                </motion.span>
-              )}
-            </div>
-            <motion.h1
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16 }}
-              className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--brand-white)] tracking-tight leading-tight"
-            >
-              {product.name}
-            </motion.h1>
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-wrap items-baseline gap-3"
-            >
-              <span className="text-3xl font-bold text-[var(--brand-blue)]">
-                ${Number(product.price).toFixed(2)}
+        {/* Details */}
+        <motion.div
+          className="flex flex-col gap-5"
+          initial="hidden" animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
+        >
+          {/* Badges */}
+          <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
+            {sellerKycVerified && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 px-3 py-1.5 text-xs font-semibold border border-emerald-500/30"
+                style={{ boxShadow: "0 2px 10px rgba(34,197,94,0.2)" }}>
+                <ShieldCheck className="w-3.5 h-3.5" /> {tDB("verifiedSeller")}
               </span>
-            </motion.div>
-          </div>
+            )}
+            {(product.tags?.length ?? 0) > 0 && product.tags!.slice(0, 3).map((tag) => (
+              <span key={tag} className="clay-badge-blue text-xs">{tag}</span>
+            ))}
+          </motion.div>
 
+          {/* Name */}
+          <motion.h1 variants={fadeUp}
+            className="text-3xl sm:text-4xl font-black text-[var(--foreground)] leading-tight tracking-tight">
+            {product.name}
+          </motion.h1>
+
+          {/* Price */}
+          <motion.div variants={fadeUp} className="flex items-baseline gap-3">
+            <span className="text-4xl font-black text-[var(--brand-blue)]" style={{ textShadow: "0 0 30px rgba(77,166,255,0.3)" }}>
+              {formatPrice(Number(product.price))}
+            </span>
+          </motion.div>
+
+          {/* Description */}
           {product.description && (
-            <motion.p
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.24 }}
-              className="text-neutral-400 leading-relaxed max-w-xl"
-            >
+            <motion.p variants={fadeUp} className="text-[var(--brand-muted)] leading-relaxed text-sm">
               {product.description}
             </motion.p>
           )}
-          {(product.tags?.length ?? 0) > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28 }}
-              className="flex flex-wrap gap-2"
-            >
-              {product.tags!.map((tag) => (
-                <span key={tag} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs text-neutral-300 border border-white/10">
-                  {tag}
-                </span>
-              ))}
-            </motion.div>
-          )}
 
-          {/* Stats: rating + likes */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32 }}
-            className="flex flex-wrap items-center gap-4 py-3 border-y border-white/10"
-          >
-            <div className="flex items-center gap-2 text-neutral-400">
-              <Star className="w-5 h-5 text-amber-500" fill="currentColor" />
-              <span className="text-sm font-medium text-[var(--brand-white)]">
-                {averageRating > 0 ? averageRating.toFixed(1) : "—"}
-              </span>
-              <span className="text-sm">({reviewCount} reviews)</span>
+          {/* Rating + likes bar */}
+          <motion.div variants={fadeUp}
+            className="flex flex-wrap items-center gap-4 py-3.5 px-4 rounded-2xl bg-[var(--card-bg)] border border-[var(--brand-border)]">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((r) => (
+                  <Star key={r} className={`w-4 h-4 ${averageRating >= r ? "text-amber-400 fill-amber-400" : "text-[var(--brand-border)]"}`} />
+                ))}
+              </div>
+              <span className="font-bold text-[var(--foreground)] text-sm">{averageRating > 0 ? averageRating.toFixed(1) : "—"}</span>
+              <span className="text-xs text-[var(--brand-muted)]">({reviewCount})</span>
             </div>
-            <motion.button
-              type="button"
-              onClick={handleLike}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
-                liked
-                  ? "border-[var(--brand-red)]/50 bg-[var(--brand-red)]/10 text-[var(--brand-red)]"
-                  : "border-white/10 bg-white/[0.03] text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
+            <div className="h-4 w-px bg-[var(--brand-border)]" />
+            <motion.button type="button" onClick={handleLike}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}
+              className={`flex items-center gap-2 text-sm font-semibold transition-colors ${liked ? "text-[var(--brand-red)]" : "text-[var(--brand-muted)] hover:text-[var(--foreground)]"}`}>
+              <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
+                <Heart className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
+              </motion.span>
               {likeCount} likes
             </motion.button>
           </motion.div>
 
-          {/* Add to cart: quantity + CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.36 }}
-            className="flex flex-col sm:flex-row gap-3"
-          >
-            <div className="flex rounded-xl border border-white/10 overflow-hidden bg-white/[0.04] w-fit">
-              <button
-                type="button"
-                onClick={() => setCartQty((q) => Math.max(1, q - 1))}
-                className="px-4 py-3 text-[var(--brand-white)] hover:bg-white/10 active:bg-white/15 transition-colors font-medium"
-              >
-                −
-              </button>
-              <span className="px-5 py-3 min-w-[3rem] text-center text-[var(--brand-white)] font-semibold bg-white/[0.04]">
-                {cartQty}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCartQty((q) => q + 1)}
-                className="px-4 py-3 text-[var(--brand-white)] hover:bg-white/10 active:bg-white/15 transition-colors font-medium"
-              >
-                +
-              </button>
+          {/* Qty + Add to cart */}
+          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center rounded-2xl border border-[var(--brand-border)] bg-[var(--card-bg)] overflow-hidden w-fit">
+              <motion.button type="button" onClick={() => setCartQty((q) => Math.max(1, q - 1))}
+                whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.92 }}
+                className="px-4 py-3 text-[var(--foreground)] font-bold text-lg transition-colors">−</motion.button>
+              <span className="px-5 py-3 min-w-[3rem] text-center font-black text-[var(--foreground)]">{cartQty}</span>
+              <motion.button type="button" onClick={() => setCartQty((q) => q + 1)}
+                whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.92 }}
+                className="px-4 py-3 text-[var(--foreground)] font-bold text-lg transition-colors">+</motion.button>
             </div>
-            <motion.button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={addingToCart}
-              whileHover={!addingToCart ? { scale: 1.02 } : {}}
-              whileTap={!addingToCart ? { scale: 0.98 } : {}}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-blue)] px-6 py-3.5 font-semibold text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-60 transition-all shadow-[0_4px_14px_-2px_rgba(100,181,246,0.4)]"
+            <motion.button type="button" onClick={handleAddToCart} disabled={addingToCart}
+              whileHover={!addingToCart ? { scale: 1.03, y: -1 } : {}} whileTap={!addingToCart ? { scale: 0.96 } : {}}
+              className="flex-1 flex items-center justify-center gap-2.5 rounded-2xl bg-[var(--brand-blue)] px-6 py-3.5 font-bold text-white disabled:opacity-60 transition-all"
+              style={{ boxShadow: "0 6px 24px -4px rgba(77,166,255,0.5)" }}
             >
-              {addingToCart ? (
-                <>
-                  <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="inline-block h-5 w-5 rounded-full border-2 border-white/30 border-t-white" />
-                  Adding…
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-5 h-5" />
-                  Add to cart
-                </>
-              )}
+              <AnimatePresence mode="wait">
+                {addingToCart ? (
+                  <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                    <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}>
+                      <Loader2 className="w-5 h-5" />
+                    </motion.span> Adding…
+                  </motion.span>
+                ) : (
+                  <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                    <ShoppingCart className="w-5 h-5" /> Add to cart
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.button>
           </motion.div>
 
+          {/* Buyer actions */}
           {user && user.id !== product.sellerId && (
             <>
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="flex flex-wrap gap-3"
-              >
-                <motion.button
-                  type="button"
-                  onClick={handleMessageSeller}
-                  disabled={startingChat}
-                  whileHover={!startingChat ? { scale: 1.02 } : {}}
-                  whileTap={!startingChat ? { scale: 0.98 } : {}}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand-blue)]/40 bg-[var(--brand-blue)]/10 px-5 py-2.5 text-sm font-medium text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/20 hover:border-[var(--brand-blue)]/60 disabled:opacity-50 transition-colors"
+              {/* Message seller */}
+              <motion.div variants={fadeUp}>
+                <motion.button type="button" onClick={handleMessageSeller} disabled={startingChat}
+                  whileHover={!startingChat ? { scale: 1.03, y: -1 } : {}} whileTap={!startingChat ? { scale: 0.96 } : {}}
+                  className="clay-card-blue w-full flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-[var(--brand-blue)] rounded-2xl disabled:opacity-50"
                 >
-                  {startingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                  {startingChat
+                    ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 className="w-4 h-4" /></motion.span>
+                    : <MessageSquare className="w-4 h-4" />
+                  }
                   {tChat("messageSeller")}
                 </motion.button>
               </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.44 }}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-              >
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--brand-white)] mb-3">
-                  <HandCoins className="w-4 h-4 text-amber-500" />
-                  {t("makeOffer")}
+
+              {/* Make an offer */}
+              <motion.div variants={fadeUp} className="clay-card p-5 space-y-4" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.06), transparent)" }}>
+                <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
+                  <HandCoins className="w-4 h-4 text-amber-400" /> {t("makeOffer")}
                 </h3>
-                {myOfferOnProduct ? (
-                  <p className="text-sm text-neutral-400">
-                    {t("youHaveOffer")}{" "}
-                    <Link href="/dashboard/offers" className="text-[var(--brand-blue)] hover:underline font-medium">
+                {myOffer ? (
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-[var(--brand-muted)]">{t("youHaveOffer")}</span>
+                    <Link href="/dashboard/offers" className="text-[var(--brand-blue)] hover:underline font-semibold">
                       {t("myOffers")}
                     </Link>
-                  </p>
+                  </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder={t("proposedPrice")}
-                      value={offerPrice}
-                      onChange={(e) => setOfferPrice(e.target.value)}
-                      className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-[var(--brand-white)] w-full sm:w-36 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/40 focus:border-[var(--brand-blue)]/40"
-                    />
-                    <input
-                      type="text"
-                      placeholder={t("optionalMessage")}
-                      value={offerMessage}
-                      onChange={(e) => setOfferMessage(e.target.value)}
-                      className="flex-1 min-w-0 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/40 focus:border-[var(--brand-blue)]/40"
-                    />
-                    <motion.button
-                      type="button"
-                      onClick={handleSubmitOffer}
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <input type="number" step="0.01" min="0" placeholder="Your price"
+                      value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)}
+                      className="clay-input px-4 py-2.5 text-sm w-full sm:w-32 text-[var(--foreground)] placeholder:text-[var(--brand-muted)]" />
+                    <input type="text" placeholder="Message (optional)"
+                      value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)}
+                      className="clay-input flex-1 px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--brand-muted)]" />
+                    <motion.button type="button" onClick={handleSubmitOffer}
                       disabled={submittingOffer || !offerPrice.trim()}
-                      whileHover={!(submittingOffer || !offerPrice.trim()) ? { scale: 1.02 } : {}}
-                      whileTap={!(submittingOffer || !offerPrice.trim()) ? { scale: 0.98 } : {}}
-                      className="rounded-xl bg-[var(--brand-blue)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--brand-blue)]/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shrink-0"
+                      whileHover={!submittingOffer && offerPrice.trim() ? { scale: 1.04 } : {}} whileTap={{ scale: 0.95 }}
+                      className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black disabled:opacity-50 flex items-center gap-2 justify-center shrink-0"
+                      style={{ boxShadow: "0 4px 14px rgba(245,158,11,0.3)" }}
                     >
-                      {submittingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      {submittingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                       {t("makeOffer")}
                     </motion.button>
                   </div>
@@ -535,333 +703,114 @@ export default function ProductDetailPage() {
               </motion.div>
             </>
           )}
-        </div>
+        </motion.div>
       </motion.div>
 
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="rounded-2xl border border-white/10 bg-white/[0.04] shadow-lg overflow-hidden"
-      >
-        {/* Amazon-style header: rating summary + title */}
-        <div className="p-6 lg:p-8 border-b border-white/10">
-          <h2 className="text-xl font-bold text-[var(--brand-white)] mb-4">Customer reviews</h2>
-          <div className="flex flex-wrap items-center gap-8">
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-[var(--brand-white)]">
+      {/* ── Reviews section ── */}
+      <motion.section variants={fadeUp} className="space-y-6">
+
+        {/* Rating summary */}
+        <div className="clay-card p-6">
+          <h2 className="text-xl font-black text-[var(--foreground)] mb-5">Customer Reviews</h2>
+          <div className="flex flex-col sm:flex-row gap-8 items-start">
+            {/* Big number */}
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <span className="text-6xl font-black text-[var(--foreground)]">
                 {averageRating > 0 ? averageRating.toFixed(1) : "—"}
               </span>
-              <div className="flex gap-0.5">
+              <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((r) => (
-                  <Star
-                    key={r}
-                    className={`w-5 h-5 ${averageRating >= r ? "text-amber-500 fill-amber-500" : "text-neutral-600"}`}
-                  />
+                  <motion.div key={r} initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    transition={{ delay: 0.1 + r * 0.07, type: "spring", stiffness: 500 }}>
+                    <Star className={`w-5 h-5 ${averageRating >= r ? "text-amber-400 fill-amber-400" : "text-[var(--brand-border)]"}`} />
+                  </motion.div>
                 ))}
               </div>
+              <span className="text-xs text-[var(--brand-muted)]">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>
             </div>
-            <p className="text-sm text-neutral-400">
-              {reviewCount === 0 ? "No reviews yet" : `Based on ${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
-            </p>
+            {/* Bar chart */}
+            <div className="flex-1 space-y-2 w-full">
+              {[5, 4, 3, 2, 1].map((star) => (
+                <RatingBar key={star} star={star} count={ratingDist[star] ?? 0} total={reviewCount} />
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Write a review — prominent card */}
-        <div className="p-6 lg:p-8 bg-white/[0.02] border-b border-white/10">
-          <h3 className="text-base font-semibold text-[var(--brand-white)] mb-4">Write a customer review</h3>
-          <div className="space-y-4 max-w-2xl">
-            <div>
-              <p className="text-sm text-neutral-400 mb-2">Your rating</p>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((r) => (
-                  <motion.button
-                    key={r}
-                    type="button"
-                    onClick={() => setReviewRating(r)}
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="p-1 rounded focus:outline-none"
-                  >
-                    <Star
-                      className={`w-8 h-8 transition-colors ${reviewRating >= r ? "text-amber-500 fill-amber-500" : "text-neutral-500 hover:text-amber-500/60"}`}
-                    />
-                  </motion.button>
+        {/* Write a review */}
+        <div className="clay-card p-6 space-y-5">
+          <h3 className="font-bold text-[var(--foreground)] flex items-center gap-2">
+            <Star className="w-4 h-4 text-amber-400" /> Write a Review
+          </h3>
+          <div className="space-y-4">
+            <StarPicker value={reviewRating} onChange={setReviewRating} />
+            <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Share your experience — what did you love or what could be better?"
+              rows={3}
+              className="clay-input w-full px-4 py-3 text-sm text-[var(--foreground)] placeholder:text-[var(--brand-muted)] resize-none"
+            />
+            {/* Photo upload */}
+            <div className="flex flex-wrap items-center gap-3">
+              <label className={`inline-flex items-center gap-2 clay-card px-3.5 py-2 text-xs font-semibold cursor-pointer hover:text-[var(--foreground)] transition-colors rounded-2xl ${reviewImageUrls.length >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}>
+                <ImagePlus className="w-4 h-4 text-[var(--brand-blue)]" />
+                {reviewImgUploading ? "Uploading…" : "Add photo"}
+                <input type="file" accept="image/*" multiple className="hidden"
+                  disabled={reviewImageUrls.length >= 3 || reviewImgUploading}
+                  onChange={(e) => handleReviewImageSelect(e, setReviewImageUrls)} />
+              </label>
+              <AnimatePresence>
+                {reviewImageUrls.map((url) => (
+                  <motion.div key={url} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                    className="relative w-16 h-16 rounded-2xl overflow-hidden border border-[var(--brand-border)]">
+                    <Image src={url} alt="" fill className="object-cover" sizes="64px" />
+                    <button type="button" onClick={() => setReviewImageUrls((p) => p.filter((u) => u !== url))}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/80 flex items-center justify-center text-white hover:bg-black transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </motion.div>
                 ))}
-              </div>
+              </AnimatePresence>
             </div>
-            <div>
-              <p className="text-sm text-neutral-400 mb-2">Your review (optional)</p>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Share your experience with this product. What did you like or dislike?"
-                rows={4}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 resize-y min-h-[100px]"
-              />
-            </div>
-            <div>
-              <p className="text-sm text-neutral-400 mb-2">Add photos (optional, max 3)</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-neutral-300 hover:text-[var(--brand-white)] hover:bg-white/[0.08] cursor-pointer transition-colors">
-                  <ImagePlus className="w-5 h-5" />
-                  Add photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    disabled={reviewImageUrls.length >= 3 || reviewImageUploading}
-                    onChange={(e) => handleReviewImageSelect(e, false)}
-                  />
-                </label>
-                {reviewImageUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {reviewImageUrls.map((url) => (
-                      <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 ring-1 ring-white/5">
-                        <Image src={url} alt="" fill className="object-cover" sizes="80px" />
-                        <button
-                          type="button"
-                          onClick={() => setReviewImageUrls((p) => p.filter((u) => u !== url))}
-                          className="absolute top-1 right-1 rounded-full bg-black/80 p-1 text-white hover:bg-black transition-colors"
-                          aria-label="Remove photo"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <motion.button
-              type="button"
-              onClick={handleSubmitReview}
+            <motion.button type="button" onClick={handleSubmitReview}
               disabled={submittingReview || reviewRating < 1}
-              whileHover={!(submittingReview || reviewRating < 1) ? { scale: 1.01 } : {}}
-              whileTap={!(submittingReview || reviewRating < 1) ? { scale: 0.99 } : {}}
-              className="rounded-lg bg-amber-500 px-6 py-3 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              whileHover={!(submittingReview || reviewRating < 1) ? { scale: 1.03, y: -1 } : {}}
+              whileTap={!(submittingReview || reviewRating < 1) ? { scale: 0.96 } : {}}
+              className="rounded-2xl bg-amber-500 px-7 py-3 text-sm font-bold text-black disabled:opacity-40 flex items-center gap-2"
+              style={{ boxShadow: reviewRating >= 1 ? "0 4px 16px rgba(245,158,11,0.35)" : "none" }}
             >
-              {submittingReview ? "Submitting…" : "Submit review"}
+              {submittingReview
+                ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 className="w-4 h-4" /></motion.span> Submitting…</>
+                : <><Send className="w-4 h-4" /> Submit Review</>
+              }
             </motion.button>
           </div>
         </div>
 
-        {/* Review list */}
-        <div className="p-6 lg:p-8">
-          <h3 className="text-base font-semibold text-[var(--brand-white)] mb-4">
-            {reviews.length === 0 ? "No reviews yet" : "All reviews"}
-          </h3>
-          {reviews.length === 0 ? (
-            <p className="text-neutral-500 text-sm py-8 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-              Be the first to share your thoughts. Your review will help other customers.
-            </p>
-          ) : (
-            <div className="space-y-6">
-              {reviews.map((rev, i) => (
-                <motion.article
-                  key={rev.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.03 * i }}
-                  className="rounded-xl bg-white/[0.03] border border-white/10 overflow-hidden"
-                >
-                  <div className="p-5">
-                    <div className="flex gap-4">
-                      <div className="shrink-0 w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-semibold text-sm">
-                        {(rev.userName || "U").slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <span className="font-semibold text-[var(--brand-white)]">{rev.userName}</span>
-                          {typeof rev.rating === "number" && (
-                            <div className="flex gap-0.5">
-                              {[1, 2, 3, 4, 5].map((r) => (
-                                <Star
-                                  key={r}
-                                  className={`w-4 h-4 ${(rev.rating ?? 0) >= r ? "text-amber-500 fill-amber-500" : "text-neutral-600"}`}
-                                />
-                              ))}
-                            </div>
-                          )}
-                          <span className="text-xs text-neutral-500">
-                            {new Date(rev.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
-                          </span>
-                        </div>
-                        {rev.comment && (
-                          <p className="text-[var(--brand-white)]/90 text-sm leading-relaxed mb-3">{rev.comment}</p>
-                        )}
-                        {(rev.imageUrls?.length ?? 0) > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {rev.imageUrls!.map((url) => (
-                              <button
-                                key={url}
-                                type="button"
-                                className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 hover:ring-2 hover:ring-amber-500/40 transition-shadow"
-                              >
-                                <Image src={url} alt="" fill className="object-cover" sizes="96px" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <span className="text-neutral-500">Was this helpful?</span>
-                          <motion.button
-                            type="button"
-                            onClick={() => handleReaction(rev.id, "like")}
-                            disabled={reactionLoadingId === rev.id}
-                            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors ${
-                              rev.userReaction === "like"
-                                ? "text-emerald-400 bg-emerald-500/20"
-                                : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
-                            }`}
-                          >
-                            <ThumbsUp className="w-4 h-4" />
-                            Yes ({rev.likeCount ?? 0})
-                          </motion.button>
-                          <motion.button
-                            type="button"
-                            onClick={() => handleReaction(rev.id, "dislike")}
-                            disabled={reactionLoadingId === rev.id}
-                            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors ${
-                              rev.userReaction === "dislike"
-                                ? "text-red-400 bg-red-500/20"
-                                : "text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5"
-                            }`}
-                          >
-                            <ThumbsDown className="w-4 h-4" />
-                            No ({rev.dislikeCount ?? 0})
-                          </motion.button>
-                          {user && (
-                            <button
-                              type="button"
-                              onClick={() => setReplyingToId(replyingToId === rev.id ? null : rev.id)}
-                              className="text-[var(--brand-blue)] hover:underline inline-flex items-center gap-1"
-                            >
-                              <Reply className="w-4 h-4" />
-                              Reply
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {replyingToId === rev.id && (
-                    <div className="border-t border-white/10 p-5 bg-white/[0.02]">
-                      <p className="text-sm font-medium text-[var(--brand-white)] mb-3">Reply to {rev.userName}</p>
-                      {replyImageUrls.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {replyImageUrls.map((url) => (
-                            <div key={url} className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/10">
-                              <Image src={url} alt="" fill className="object-cover" sizes="56px" />
-                              <button
-                                type="button"
-                                onClick={() => setReplyImageUrls((p) => p.filter((u) => u !== url))}
-                                className="absolute top-0.5 right-0.5 rounded-full bg-black/80 p-0.5 text-white"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <input
-                          type="text"
-                          value={replyComment}
-                          onChange={(e) => setReplyComment(e.target.value)}
-                          placeholder="Write your reply…"
-                          className="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                        />
-                        <div className="flex items-center gap-2">
-                          <label className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-neutral-400 hover:text-[var(--brand-white)] cursor-pointer shrink-0 inline-flex items-center gap-1">
-                            <ImagePlus className="w-4 h-4" /> Photo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              className="hidden"
-                              disabled={replyImageUrls.length >= 3}
-                              onChange={(e) => handleReviewImageSelect(e, true)}
-                            />
-                          </label>
-                          <motion.button
-                            type="button"
-                            onClick={() => handleReplySubmit(rev.id)}
-                            disabled={submittingReply || !replyComment.trim()}
-                            className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50"
-                          >
-                            {submittingReply ? "Sending…" : "Send"}
-                          </motion.button>
-                          <button
-                            type="button"
-                            onClick={() => { setReplyingToId(null); setReplyComment(""); setReplyImageUrls([]); }}
-                            className="text-sm text-neutral-500 hover:text-[var(--brand-white)]"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(rev.replies?.length ?? 0) > 0 && (
-                    <div className="border-t border-white/10">
-                      {rev.replies!.map((rep) => (
-                        <div
-                          key={rep.id}
-                          className="flex gap-3 pl-5 pr-5 py-4 bg-white/[0.02] ml-4 border-l-2 border-amber-500/30"
-                        >
-                          <div className="shrink-0 w-8 h-8 rounded-full bg-[var(--brand-blue)]/20 flex items-center justify-center text-[var(--brand-blue)] font-medium text-xs">
-                            {(rep.userName || "U").slice(0, 2).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm text-[var(--brand-white)]">{rep.userName}</span>
-                              <span className="text-xs text-neutral-500">
-                                {new Date(rep.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
-                              </span>
-                            </div>
-                            {rep.comment && <p className="text-sm text-neutral-400 leading-relaxed mb-2">{rep.comment}</p>}
-                            {(rep.imageUrls?.length ?? 0) > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mb-2">
-                                {rep.imageUrls.map((url) => (
-                                  <div key={url} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10">
-                                    <Image src={url} alt="" fill className="object-cover" sizes="64px" />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 text-xs">
-                              <button
-                                type="button"
-                                onClick={() => handleReaction(rep.id, "like")}
-                                disabled={reactionLoadingId === rep.id}
-                                className={`inline-flex items-center gap-1 ${rep.userReaction === "like" ? "text-emerald-400" : "text-neutral-500 hover:text-[var(--brand-white)]"}`}
-                              >
-                                <ThumbsUp className="w-3.5 h-3.5" /> {rep.likeCount ?? 0}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleReaction(rep.id, "dislike")}
-                                disabled={reactionLoadingId === rep.id}
-                                className={`inline-flex items-center gap-1 ${rep.userReaction === "dislike" ? "text-red-400" : "text-neutral-500 hover:text-[var(--brand-white)]"}`}
-                              >
-                                <ThumbsDown className="w-3.5 h-3.5" /> {rep.dislikeCount ?? 0}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.article>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Review list — social feed style */}
+        {reviews.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="clay-card p-12 text-center">
+            <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+              <MessageSquare className="mx-auto w-12 h-12 text-[var(--brand-muted)]/25 mb-4" />
+            </motion.div>
+            <p className="font-bold text-[var(--foreground)] mb-1">No reviews yet</p>
+            <p className="text-sm text-[var(--brand-muted)]">Be the first to share your thoughts</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="space-y-3"
+            initial="hidden" animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+          >
+            {reviews.map((rev) => (
+              <ReviewCard key={rev.id} rev={rev} user={user} productId={id}
+                onReaction={handleReaction} onReply={handleReplySubmit}
+                reactionLoadingId={reactionLoadingId} />
+            ))}
+          </motion.div>
+        )}
       </motion.section>
-    </div>
+    </motion.div>
   );
 }

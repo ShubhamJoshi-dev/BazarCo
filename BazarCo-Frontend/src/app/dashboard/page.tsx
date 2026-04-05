@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { User, ShoppingCart, Flame, TrendingUp, ImageIcon, ChevronRight, ShieldCheck, LayoutGrid, BarChart3, FileBarChart, DollarSign, Package, HandCoins, MessageCircle } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import {
+  User, ShoppingCart, Flame, TrendingUp, ImageIcon, ChevronRight,
+  ShieldCheck, LayoutGrid, BarChart3, FileBarChart, DollarSign,
+  Package, HandCoins, MessageCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { browseProducts, sellerReport, type SellerReport } from "@/lib/api";
@@ -16,6 +21,7 @@ const CARD_STAGGER = 0.04;
 export default function DashboardPage() {
   const { user } = useAuth();
   const t = useTranslations("dashboard");
+  const { formatPrice } = useCurrency();
   const isSeller = user?.role === "seller";
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,114 +44,96 @@ export default function DashboardPage() {
   const bestSelling = products.slice(8, 16);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+
+      {/* Compact animated greeting bar */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="relative rounded-2xl overflow-hidden settings-card card-glow p-6 md:p-8"
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="flex items-center gap-3 px-1"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand-red)]/10 via-transparent to-[var(--brand-blue)]/10 pointer-events-none" />
+        <motion.span
+          animate={{ rotate: [0, 18, -10, 18, 0] }}
+          transition={{ duration: 1.2, delay: 0.5, ease: "easeInOut" }}
+          className="text-2xl select-none"
+          style={{ display: "inline-block", transformOrigin: "70% 80%" }}
+        >
+          👋
+        </motion.span>
         <motion.div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none"
-          animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          style={{
-            backgroundImage: "linear-gradient(90deg, var(--brand-red), var(--brand-blue), var(--brand-red))",
-            backgroundSize: "200% 200%",
-          }}
-        />
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="min-w-0">
-            <motion.h2
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
-              className="text-2xl font-bold text-[var(--brand-white)] mb-2"
-            >
-              {isSeller ? t("welcomeSeller") : t("welcomeBack")}
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25, duration: 0.4 }}
-              className="text-neutral-400 max-w-lg"
-            >
-              {isSeller ? t("subtitleSeller") : t("subtitleBuyer")}
-            </motion.p>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="flex shrink-0 justify-end"
-          >
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="relative"
-            >
-              <Image
-                src="/logo.png"
-                alt="BazarCo"
-                width={140}
-                height={58}
-                className="h-12 w-auto md:h-14 drop-shadow-[0_0_20px_rgba(255,255,255,0.08)]"
-                priority
-              />
-            </motion.div>
-          </motion.div>
-        </div>
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15, duration: 0.4 }}
+        >
+          <span className="text-lg font-bold text-[var(--foreground)]">
+            {isSeller ? t("welcomeSeller") : t("welcomeBack")}
+            {user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+          </span>
+          <span className="ml-2 text-sm text-[var(--brand-muted)]">
+            {isSeller ? t("subtitleSeller") : t("subtitleBuyer")}
+          </span>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 400, damping: 20 }}
+          className="ml-auto shrink-0"
+        >
+          <span className={`clay-badge-${isSeller ? "red" : "blue"} flex items-center gap-1.5`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            {isSeller ? "Seller" : "Buyer"}
+          </span>
+        </motion.div>
       </motion.div>
 
+      {/* Feature highlight cards */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06, duration: 0.35 }}
+        transition={{ delay: 0.06 }}
         className="grid gap-4 sm:grid-cols-2"
       >
         <motion.div
-          whileHover={{ y: -4, scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="group rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-5 transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:shadow-[0_12px_40px_-12px_rgba(16,185,129,0.25)]"
+          whileHover={{ y: -5, scale: 1.01 }}
+          transition={{ type: "spring", stiffness: 380, damping: 24 }}
         >
-          <div className="flex items-start gap-4">
-            <motion.div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 transition-colors group-hover:bg-emerald-500/30"
-              whileHover={{ scale: 1.08 }}
-            >
-              <ShieldCheck className="h-6 w-6" strokeWidth={2} />
-            </motion.div>
-            <div>
-              <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("verifiedSellers")}</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed">
-                {t("verifiedSellersDesc")}
-              </p>
+          <div className="clay-card-blue p-5 h-full">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+                <ShieldCheck className="h-6 w-6" strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--foreground)] mb-1">{t("verifiedSellers")}</h3>
+                <p className="text-sm text-[var(--brand-muted)] leading-relaxed">
+                  {t("verifiedSellersDesc")}
+                </p>
+              </div>
             </div>
           </div>
         </motion.div>
+
         <motion.div
-          whileHover={{ y: -4, scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="group rounded-2xl border border-[var(--brand-blue)]/25 bg-[var(--brand-blue)]/5 p-5 transition-all duration-200 hover:border-[var(--brand-blue)]/40 hover:bg-[var(--brand-blue)]/10 hover:shadow-[0_12px_40px_-12px_rgba(100,181,246,0.25)]"
+          whileHover={{ y: -5, scale: 1.01 }}
+          transition={{ type: "spring", stiffness: 380, damping: 24 }}
         >
-          <div className="flex items-start gap-4">
-            <motion.div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)] transition-colors group-hover:bg-[var(--brand-blue)]/30"
-              whileHover={{ scale: 1.08 }}
-            >
-              <LayoutGrid className="h-6 w-6" strokeWidth={2} />
-            </motion.div>
-            <div>
-              <h3 className="font-semibold text-[var(--brand-white)] mb-1">{t("catalogManagement")}</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed">
-                {isSeller ? t("catalogDescSeller") : t("catalogDescBuyer")}
-              </p>
+          <div className="clay-card-red p-5 h-full">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-red)]/20 text-[var(--brand-red)]">
+                <LayoutGrid className="h-6 w-6" strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--foreground)] mb-1">{t("catalogManagement")}</h3>
+                <p className="text-sm text-[var(--brand-muted)] leading-relaxed">
+                  {isSeller ? t("catalogDescSeller") : t("catalogDescBuyer")}
+                </p>
+              </div>
             </div>
           </div>
         </motion.div>
       </motion.section>
 
+      {/* Seller analytics stats */}
       {isSeller && (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
@@ -154,77 +142,79 @@ export default function DashboardPage() {
           className="space-y-4"
         >
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)]">
+            <h3 className="flex items-center gap-2 text-base font-bold text-[var(--foreground)]">
               <BarChart3 className="w-5 h-5 text-[var(--brand-red)]" />
               Analytics
             </h3>
             <Link
               href="/dashboard/analytics"
-              className="text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1"
+              className="text-sm font-semibold text-[var(--brand-blue)] hover:underline flex items-center gap-1"
             >
-              View analytics <ChevronRight className="w-4 h-4" />
+              View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/dashboard/analytics"
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 hover:bg-white/[0.06] transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-                <DollarSign className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-[var(--brand-white)]">
-                  ${typeof sellerReportData?.salesTotal === "number" ? sellerReportData.salesTotal.toFixed(2) : "0.00"}
-                </p>
-                <p className="text-xs text-neutral-400">Total sales</p>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/orders"
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 hover:bg-white/[0.06] transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]">
-                <ShoppingCart className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-[var(--brand-white)]">
-                  {(sellerReportData?.ordersCompleted?.length ?? 0) + (sellerReportData?.ordersInProgress?.length ?? 0)}
-                </p>
-                <p className="text-xs text-neutral-400">Orders</p>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/analytics"
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 hover:bg-white/[0.06] transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
-                <Package className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-[var(--brand-white)]">{sellerReportData?.soldCount ?? 0}</p>
-                <p className="text-xs text-neutral-400">Sold</p>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/report"
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 hover:bg-white/[0.06] transition-all flex items-center gap-3"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-400">
-                <FileBarChart className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold text-[var(--brand-white)]">{sellerReportData?.productsActive ?? 0}</p>
-                <p className="text-xs text-neutral-400">Active listings</p>
-              </div>
-            </Link>
+            {[
+              {
+                href: "/dashboard/analytics",
+                icon: <DollarSign className="h-5 w-5" />,
+                iconBg: "bg-emerald-500/20 text-emerald-400",
+                value: formatPrice(typeof sellerReportData?.salesTotal === "number" ? sellerReportData.salesTotal : 0),
+                label: "Total sales",
+                variant: "clay-card" as const,
+              },
+              {
+                href: "/dashboard/orders",
+                icon: <ShoppingCart className="h-5 w-5" />,
+                iconBg: "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]",
+                value: (sellerReportData?.ordersCompleted?.length ?? 0) + (sellerReportData?.ordersInProgress?.length ?? 0),
+                label: "Orders",
+                variant: "clay-card-blue" as const,
+              },
+              {
+                href: "/dashboard/analytics",
+                icon: <Package className="h-5 w-5" />,
+                iconBg: "bg-amber-500/20 text-amber-400",
+                value: sellerReportData?.soldCount ?? 0,
+                label: "Sold",
+                variant: "clay-card" as const,
+              },
+              {
+                href: "/dashboard/report",
+                icon: <FileBarChart className="h-5 w-5" />,
+                iconBg: "bg-violet-500/20 text-violet-400",
+                value: sellerReportData?.productsActive ?? 0,
+                label: "Active listings",
+                variant: "clay-card-red" as const,
+              },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Link href={stat.href} className={`${stat.variant} flex items-center gap-3 p-4 block`}>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
+                    {stat.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-[var(--foreground)]">{stat.value}</p>
+                    <p className="text-xs text-[var(--brand-muted)]">{stat.label}</p>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
           </div>
-          <p className="text-sm text-neutral-500">
-            Full analytics and reports available in <Link href="/dashboard/analytics" className="text-[var(--brand-blue)] hover:underline">Analytics</Link> and <Link href="/dashboard/report" className="text-[var(--brand-blue)] hover:underline">Reports</Link>.
+          <p className="text-sm text-[var(--brand-muted)]">
+            Full data in{" "}
+            <Link href="/dashboard/analytics" className="text-[var(--brand-blue)] hover:underline font-medium">Analytics</Link>
+            {" "}and{" "}
+            <Link href="/dashboard/report" className="text-[var(--brand-blue)] hover:underline font-medium">Reports</Link>.
           </p>
         </motion.section>
       )}
 
+      {/* Buyer product sections */}
       {!isSeller && (
         <>
           <motion.section
@@ -234,15 +224,11 @@ export default function DashboardPage() {
             className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)]">
-                <Flame className="w-5 h-5 text-[var(--brand-red)]" />
-                Hot sales
+              <h3 className="flex items-center gap-2 text-base font-bold text-[var(--foreground)]">
+                <Flame className="w-5 h-5 text-[var(--brand-red)]" /> Hot sales
               </h3>
-              <Link
-                href="/dashboard/browse"
-                className="group/link text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1 transition-transform duration-200 hover:gap-2"
-              >
-                View all <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-0.5" />
+              <Link href="/dashboard/browse" className="text-sm font-semibold text-[var(--brand-blue)] hover:underline flex items-center gap-1">
+                View all <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             {loading ? (
@@ -250,12 +236,11 @@ export default function DashboardPage() {
                 {Array.from({ length: 4 }).map((_, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0.3 }}
-                    animate={{ opacity: 0.6 }}
+                    initial={{ opacity: 0.3 }} animate={{ opacity: 0.6 }}
                     transition={{ repeat: Infinity, duration: 1.2, repeatType: "reverse" }}
-                    className="relative rounded-xl border border-white/10 bg-white/5 aspect-[3/4] overflow-hidden"
+                    className="clay-card aspect-[3/4] overflow-hidden relative"
                   >
-                    <div className="absolute inset-0 loading-shimmer-bar opacity-30" />
+                    <div className="absolute inset-0 loading-shimmer-bar opacity-20 rounded-3xl" />
                   </motion.div>
                 ))}
               </div>
@@ -266,13 +251,9 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-neutral-500 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center"
-              >
-                {t("noHotProducts")}
-              </motion.p>
+              <div className="clay-card px-4 py-8 text-center">
+                <p className="text-sm text-[var(--brand-muted)]">{t("noHotProducts")}</p>
+              </div>
             )}
           </motion.section>
 
@@ -283,15 +264,11 @@ export default function DashboardPage() {
             className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)]">
-                <TrendingUp className="w-5 h-5 text-[var(--brand-blue)]" />
-                {t("bestSelling")}
+              <h3 className="flex items-center gap-2 text-base font-bold text-[var(--foreground)]">
+                <TrendingUp className="w-5 h-5 text-[var(--brand-blue)]" /> {t("bestSelling")}
               </h3>
-              <Link
-                href="/dashboard/browse"
-                className="group/link text-sm font-medium text-[var(--brand-blue)] hover:underline flex items-center gap-1 transition-transform duration-200 hover:gap-2"
-              >
-                {t("viewAll")} <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-0.5" />
+              <Link href="/dashboard/browse" className="text-sm font-semibold text-[var(--brand-blue)] hover:underline flex items-center gap-1">
+                {t("viewAll")} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             {loading ? (
@@ -299,12 +276,11 @@ export default function DashboardPage() {
                 {Array.from({ length: 4 }).map((_, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0.3 }}
-                    animate={{ opacity: 0.6 }}
+                    initial={{ opacity: 0.3 }} animate={{ opacity: 0.6 }}
                     transition={{ repeat: Infinity, duration: 1.2, repeatType: "reverse" }}
-                    className="rounded-xl border border-white/10 bg-white/5 aspect-[3/4] overflow-hidden relative"
+                    className="clay-card aspect-[3/4] overflow-hidden relative"
                   >
-                    <div className="absolute inset-0 loading-shimmer-bar opacity-30" />
+                    <div className="absolute inset-0 loading-shimmer-bar opacity-20 rounded-3xl" />
                   </motion.div>
                 ))}
               </div>
@@ -315,37 +291,33 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-neutral-500 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-6 text-center"
-              >
-                {t("noBestSellers")}
-              </motion.p>
+              <div className="clay-card px-4 py-8 text-center">
+                <p className="text-sm text-[var(--brand-muted)]">{t("noBestSellers")}</p>
+              </div>
             )}
           </motion.section>
         </>
       )}
 
-      <div className={`grid gap-5 ${isSeller ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+      {/* Quick action clay cards */}
+      <div className={`grid gap-4 ${isSeller ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          whileHover={{ y: -4, scale: 1.02 }}
-          className="transition-shadow duration-200 hover:shadow-[0_8px_24px_-8px_rgba(229,115,115,0.3)]"
+          whileHover={{ y: -5, scale: 1.01, transition: { type: "spring", stiffness: 380, damping: 24 } }}
         >
           <Link
             href={isSeller ? "/dashboard/products" : "/dashboard/browse"}
-            className="block rounded-2xl border border-[var(--brand-red)]/30 bg-[var(--brand-red)]/10 p-5 hover:border-[var(--brand-red)]/50 hover:bg-[var(--brand-red)]/15 transition-all duration-200"
+            className="clay-card-red block p-5 hover:no-underline"
           >
-            <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-xl bg-white/5 text-[var(--brand-white)]">
-              <ShoppingCart className="w-7 h-7" strokeWidth={2} />
+            <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-2xl bg-[var(--brand-red)]/20 text-[var(--brand-red)]">
+              <ShoppingCart className="w-6 h-6" strokeWidth={2} />
             </div>
-            <p className="font-semibold text-[var(--brand-white)] mb-1">
+            <p className="font-bold text-[var(--foreground)] mb-1">
               {isSeller ? t("listings") : t("myOrders")}
             </p>
-            <p className="text-sm text-neutral-400">
+            <p className="text-sm text-[var(--brand-muted)]">
               {isSeller ? t("manageProducts") : t("browseAndBuy")}
             </p>
           </Link>
@@ -356,19 +328,14 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            whileHover={{ y: -4, scale: 1.02 }}
+            whileHover={{ y: -5, scale: 1.01 }}
           >
-            <Link
-              href="/dashboard/offers"
-              className="block rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 hover:border-amber-500/50 hover:bg-amber-500/15 transition-all duration-200"
-            >
-              <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
-                <HandCoins className="w-7 h-7" strokeWidth={2} />
+            <Link href="/dashboard/offers" className="clay-card block p-5 border-amber-500/20 hover:no-underline" style={{ boxShadow: "0 10px 40px -6px rgba(245,158,11,0.25), 0 4px 12px rgba(245,158,11,0.12), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+              <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400">
+                <HandCoins className="w-6 h-6" strokeWidth={2} />
               </div>
-              <p className="font-semibold text-[var(--brand-white)] mb-1">Offers</p>
-              <p className="text-sm text-neutral-400">
-                Incoming offers · Chat & negotiate
-              </p>
+              <p className="font-bold text-[var(--foreground)] mb-1">Offers</p>
+              <p className="text-sm text-[var(--brand-muted)]">Incoming offers · Chat & negotiate</p>
             </Link>
           </motion.div>
         )}
@@ -378,19 +345,14 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.18 }}
-            whileHover={{ y: -4, scale: 1.02 }}
+            whileHover={{ y: -5, scale: 1.01 }}
           >
-            <Link
-              href="/dashboard/chat"
-              className="block rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 hover:border-emerald-500/50 hover:bg-emerald-500/15 transition-all duration-200"
-            >
-              <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-                <MessageCircle className="w-7 h-7" strokeWidth={2} />
+            <Link href="/dashboard/chat" className="clay-card block p-5 border-emerald-500/20 hover:no-underline" style={{ boxShadow: "0 10px 40px -6px rgba(16,185,129,0.25), 0 4px 12px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+              <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+                <MessageCircle className="w-6 h-6" strokeWidth={2} />
               </div>
-              <p className="font-semibold text-[var(--brand-white)] mb-1">Chat</p>
-              <p className="text-sm text-neutral-400">
-                Conversations with buyers
-              </p>
+              <p className="font-bold text-[var(--foreground)] mb-1">Chat</p>
+              <p className="text-sm text-[var(--brand-muted)]">Conversations with buyers</p>
             </Link>
           </motion.div>
         )}
@@ -398,94 +360,70 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: isSeller ? 0.2 : 0.2 }}
-          whileHover={{ y: -4, scale: 1.02 }}
+          transition={{ delay: 0.2 }}
+          whileHover={{ y: -5, scale: 1.01 }}
         >
-          <Link
-            href="/dashboard/profile"
-            className="block rounded-2xl border border-[var(--brand-blue)]/30 bg-[var(--brand-blue)]/10 p-5 hover:border-[var(--brand-blue)]/50 hover:bg-[var(--brand-blue)]/15 transition-all duration-200"
-          >
-            <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-xl bg-white/5 text-[var(--brand-white)]">
-              <User className="w-7 h-7" strokeWidth={2} />
+          <Link href="/dashboard/profile" className="clay-card-blue block p-5 hover:no-underline">
+            <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-2xl bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]">
+              <User className="w-6 h-6" strokeWidth={2} />
             </div>
-            <p className="font-semibold text-[var(--brand-white)] mb-1">
-              {t("profileSettings")}
-            </p>
-            <p className="text-sm text-neutral-400">
-              {t("profileSettingsDesc")}
-            </p>
+            <p className="font-bold text-[var(--foreground)] mb-1">{t("profileSettings")}</p>
+            <p className="text-sm text-[var(--brand-muted)]">{t("profileSettingsDesc")}</p>
           </Link>
         </motion.div>
       </div>
 
+      {/* Signed-in status bar */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.35 }}
-        className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4 flex flex-wrap items-center gap-3"
+        className="clay-card px-5 py-4 flex flex-wrap items-center gap-3"
       >
-        <span className="text-sm text-neutral-500">Signed in as</span>
-        <span className="text-sm font-medium text-[var(--brand-white)]">
-          {user?.email}
-        </span>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            isSeller
-              ? "bg-[var(--brand-red)]/20 text-[var(--brand-red)]"
-              : "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]"
-          }`}
-        >
-          {user?.role}
-        </span>
+        <span className="text-sm text-[var(--brand-muted)]">Signed in as</span>
+        <span className="text-sm font-semibold text-[var(--foreground)]">{user?.email}</span>
+        <span className={isSeller ? "clay-badge-red" : "clay-badge-blue"}>{user?.role}</span>
       </motion.div>
     </div>
   );
 }
 
-function DashboardProductCard({
-  product,
-  index,
-  delay,
-}: {
-  product: Product;
-  index: number;
-  delay: number;
-}) {
+function DashboardProductCard({ product, index, delay }: { product: Product; index: number; delay: number }) {
+  const { formatPrice } = useCurrency();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, type: "spring", stiffness: 400, damping: 28 }}
-      whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 400, damping: 25 } }}
+      transition={{ delay, type: "spring", stiffness: 380, damping: 28 }}
+      whileHover={{ y: -7, scale: 1.03, transition: { type: "spring", stiffness: 380, damping: 24 } }}
     >
       <Link
         href={`/dashboard/product/${product.id}`}
-        className="group block rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-[var(--brand-blue)]/30 hover:bg-white/[0.06] hover:shadow-[0_12px_32px_-8px_rgba(100,181,246,0.2)] transition-all duration-300"
+        className="clay-card block overflow-hidden hover:no-underline group"
+        style={{ padding: 0 }}
       >
-        <div className="aspect-square bg-white/5 relative overflow-hidden">
+        <div className="aspect-square bg-[var(--brand-border)] relative overflow-hidden rounded-t-[24px]">
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
               alt={product.name}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover transition-transform duration-500 group-hover:scale-108"
               sizes="(max-width: 640px) 50vw, 25vw"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-neutral-600">
+            <div className="absolute inset-0 flex items-center justify-center text-[var(--brand-muted)]">
               <ImageIcon className="w-12 h-12" />
             </div>
           )}
           {product.category && (
-            <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
-              {product.category}
-            </span>
+            <span className="absolute top-2 left-2 clay-badge-blue text-[10px]">{product.category}</span>
           )}
         </div>
         <div className="p-3">
-          <p className="font-medium text-[var(--brand-white)] truncate text-sm">{product.name}</p>
-          <p className="text-[var(--brand-blue)] font-semibold mt-0.5">
-            ${typeof product.price === "number" ? product.price.toFixed(2) : product.price}
+          <p className="font-semibold text-[var(--foreground)] truncate text-sm">{product.name}</p>
+          <p className="text-[var(--brand-blue)] font-bold mt-0.5">
+            {formatPrice(typeof product.price === "number" ? product.price : Number(product.price))}
           </p>
         </div>
       </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -23,18 +23,9 @@ function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (!token) {
-      setError("Invalid reset link. Request a new one.");
-      return;
-    }
+    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
+    if (!token) { setError("Invalid reset link. Request a new one."); return; }
     setLoading(true);
     const result = await authResetPassword(token, password);
     setLoading(false);
@@ -48,10 +39,10 @@ function ResetPasswordForm() {
 
   if (!hasToken) {
     return (
-      <div className="rounded-xl border border-[var(--brand-red)]/40 bg-[var(--brand-red)]/10 px-4 py-4 text-sm text-[var(--brand-red)]">
-        Invalid or missing reset link. Please request a new password reset from the sign in page.
+      <div className="clay-card-red rounded-2xl px-4 py-4 text-sm text-[var(--brand-red)]">
+        Invalid or missing reset link. Please request a new password reset.
         <p className="mt-4">
-          <Link href="/forgot-password" className="text-[var(--brand-blue)] font-medium hover:underline">
+          <Link href="/forgot-password" className="text-[var(--brand-blue)] font-semibold hover:underline">
             Request new link
           </Link>
         </p>
@@ -61,21 +52,25 @@ function ResetPasswordForm() {
 
   if (success) {
     return (
-      <div className="rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-4 text-sm text-green-400">
-        Password has been reset. Redirecting you to sign in...
+      <div className="clay-card rounded-2xl border-emerald-500/25 px-4 py-4 text-sm text-emerald-400" style={{ boxShadow: "0 8px 24px rgba(16,185,129,0.18)" }}>
+        Password has been reset. Redirecting you to sign in…
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
-        <div className="rounded-lg bg-[var(--brand-red)]/15 border border-[var(--brand-red)]/40 px-4 py-3 text-sm text-[var(--brand-red)]">
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-[var(--brand-red)]/12 border border-[var(--brand-red)]/35 px-4 py-3 text-sm text-[var(--brand-red)]"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
       <div>
-        <label htmlFor="reset-password" className="block text-sm font-medium text-neutral-300 mb-1.5">
+        <label htmlFor="reset-password" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
           New password
         </label>
         <input
@@ -85,12 +80,12 @@ function ResetPasswordForm() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
           disabled={loading}
-          className="w-full rounded-xl border border-neutral-600 bg-neutral-900/80 px-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 disabled:opacity-60"
+          className="clay-input w-full px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--brand-muted)] disabled:opacity-60"
           placeholder="At least 8 characters"
         />
       </div>
       <div>
-        <label htmlFor="reset-confirm" className="block text-sm font-medium text-neutral-300 mb-1.5">
+        <label htmlFor="reset-confirm" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
           Confirm password
         </label>
         <input
@@ -100,18 +95,18 @@ function ResetPasswordForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           autoComplete="new-password"
           disabled={loading}
-          className="w-full rounded-xl border border-neutral-600 bg-neutral-900/80 px-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 disabled:opacity-60"
+          className="clay-input w-full px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--brand-muted)] disabled:opacity-60"
           placeholder="Repeat password"
         />
       </div>
       <motion.button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-[var(--brand-blue)] py-3 font-semibold text-white hover:bg-[var(--brand-blue)]/90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] focus:ring-offset-2 focus:ring-offset-[var(--brand-black)] disabled:opacity-60 disabled:cursor-not-allowed"
+        className="clay-btn-blue w-full py-3.5 text-base"
         whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+        whileTap={{ scale: 0.98 }}
       >
-        {loading ? "Resetting..." : "Reset password"}
+        {loading ? "Resetting…" : "Reset password"}
       </motion.button>
     </form>
   );
@@ -120,11 +115,11 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <AuthLayout title="Reset password" subtitle="Enter your new password below">
-      <Suspense fallback={<div className="text-neutral-400 text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="text-[var(--brand-muted)] text-sm">Loading…</div>}>
         <ResetPasswordForm />
       </Suspense>
-      <p className="mt-6 text-center text-sm text-neutral-400">
-        <Link href="/login" className="text-[var(--brand-blue)] font-medium hover:underline">
+      <p className="mt-6 text-center text-sm text-[var(--brand-muted)]">
+        <Link href="/login" className="text-[var(--brand-blue)] font-semibold hover:underline">
           Back to sign in
         </Link>
       </p>

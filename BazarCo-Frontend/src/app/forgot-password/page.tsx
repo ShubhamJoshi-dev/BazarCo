@@ -16,39 +16,34 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
     setSuccess(false);
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
+    if (!email.trim()) { setError("Email is required"); return; }
     setLoading(true);
     const result = await authForgotPassword(email.trim());
     setLoading(false);
-    if (result.status === "success") {
-      setSuccess(true);
-      return;
-    }
+    if (result.status === "success") { setSuccess(true); return; }
     setError(result.message);
   }
 
   return (
-    <AuthLayout
-      title="Forgot password"
-      subtitle="Enter your email and we'll send you a reset link"
-    >
+    <AuthLayout title="Forgot password" subtitle="Enter your email and we'll send you a reset link">
       {success ? (
-        <div className="rounded-xl border border-[var(--brand-blue)]/40 bg-[var(--brand-blue)]/10 px-4 py-4 text-sm text-[var(--brand-blue)]">
+        <div className="clay-card-blue rounded-2xl px-4 py-4 text-sm text-[var(--brand-blue)]">
           If an account exists for that email, you will receive a password reset link shortly.
           Check your inbox and spam folder.
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="rounded-lg bg-[var(--brand-red)]/15 border border-[var(--brand-red)]/40 px-4 py-3 text-sm text-[var(--brand-red)]">
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-[var(--brand-red)]/12 border border-[var(--brand-red)]/35 px-4 py-3 text-sm text-[var(--brand-red)]"
+            >
               {error}
-            </div>
+            </motion.div>
           )}
           <div>
-            <label htmlFor="forgot-email" className="block text-sm font-medium text-neutral-300 mb-1.5">
+            <label htmlFor="forgot-email" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
               Email
             </label>
             <input
@@ -58,23 +53,23 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               disabled={loading}
-              className="w-full rounded-xl border border-neutral-600 bg-neutral-900/80 px-4 py-3 text-[var(--brand-white)] placeholder:text-neutral-500 focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/30 disabled:opacity-60"
+              className="clay-input w-full px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--brand-muted)] disabled:opacity-60"
               placeholder="you@example.com"
             />
           </div>
           <motion.button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[var(--brand-blue)] py-3 font-semibold text-white hover:bg-[var(--brand-blue)]/90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] focus:ring-offset-2 focus:ring-offset-[var(--brand-black)] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="clay-btn-blue w-full py-3.5 text-base"
             whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+            whileTap={{ scale: 0.98 }}
           >
-            {loading ? "Sending..." : "Send reset link"}
+            {loading ? "Sending…" : "Send reset link"}
           </motion.button>
         </form>
       )}
-      <p className="mt-6 text-center text-sm text-neutral-400">
-        <Link href="/login" className="text-[var(--brand-blue)] font-medium hover:underline">
+      <p className="mt-6 text-center text-sm text-[var(--brand-muted)]">
+        <Link href="/login" className="text-[var(--brand-blue)] font-semibold hover:underline">
           Back to sign in
         </Link>
       </p>
