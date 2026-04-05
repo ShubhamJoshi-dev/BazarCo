@@ -75,23 +75,33 @@ export async function findActiveForBrowse(options: {
   query?: string;
   categoryId?: string;
   tagIds?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: "newest" | "price-asc" | "price-desc" | "name-asc";
   limit: number;
   skip: number;
 }) {
-  const { query, categoryId, tagIds, limit, skip } = options;
+  const { query, categoryId, tagIds, minPrice, maxPrice, sortBy, limit, skip } = options;
   const filter: Record<string, unknown> = { status: "active" };
   if (categoryId?.trim()) filter.categoryId = categoryId.trim();
   if (tagIds?.length) filter.tagIds = { $in: tagIds };
   if (query?.trim()) {
     const escaped = escapeRegex(query.trim());
     const regex = new RegExp(escaped, "i");
-    filter.$or = [
-      { name: regex },
-      { description: regex },
-    ];
+    filter.$or = [{ name: regex }, { description: regex }];
   }
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    const priceFilter: Record<string, number> = {};
+    if (minPrice !== undefined && minPrice >= 0) priceFilter.$gte = minPrice;
+    if (maxPrice !== undefined && maxPrice > 0) priceFilter.$lte = maxPrice;
+    if (Object.keys(priceFilter).length) filter.price = priceFilter;
+  }
+  let sortSpec: Record<string, 1 | -1> = { createdAt: -1 };
+  if (sortBy === "price-asc") sortSpec = { price: 1 };
+  else if (sortBy === "price-desc") sortSpec = { price: -1 };
+  else if (sortBy === "name-asc") sortSpec = { name: 1 };
   const [docs, total] = await Promise.all([
-    Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Product.find(filter).sort(sortSpec).skip(skip).limit(limit).lean(),
     Product.countDocuments(filter),
   ]);
   return { docs, total };

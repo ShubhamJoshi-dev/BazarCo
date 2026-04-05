@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -18,18 +18,62 @@ import {
 } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { sellerReport, type SellerReport } from "@/lib/api";
+import { TablePaginationBar } from "@/components/dashboard/TablePaginationBar";
 
 const CHART_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#8b5cf6", "#ec4899"];
 
 export default function ReportPage() {
   const [report, setReport] = useState<SellerReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [productPage, setProductPage] = useState(1);
+  const [productPageSize, setProductPageSize] = useState(5);
+  const [soldPage, setSoldPage] = useState(1);
+  const [soldPageSize, setSoldPageSize] = useState(5);
+  const [inProgressPage, setInProgressPage] = useState(1);
+  const [inProgressPageSize, setInProgressPageSize] = useState(5);
 
   useEffect(() => {
     sellerReport()
       .then(setReport)
       .finally(() => setLoading(false));
   }, []);
+
+  const productList = useMemo(() => (report?.productList?.length ? report.productList : []), [report?.productList]);
+  const productsSold = useMemo(() => (report?.productsSold?.length ? report.productsSold : []), [report?.productsSold]);
+  const ordersInProgress = useMemo(
+    () => (report?.ordersInProgress?.length ? report.ordersInProgress : []),
+    [report?.ordersInProgress],
+  );
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(productList.length / productPageSize));
+    if (productPage > tp) setProductPage(tp);
+  }, [productList.length, productPageSize, productPage]);
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(productsSold.length / soldPageSize));
+    if (soldPage > tp) setSoldPage(tp);
+  }, [productsSold.length, soldPageSize, soldPage]);
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(ordersInProgress.length / inProgressPageSize));
+    if (inProgressPage > tp) setInProgressPage(tp);
+  }, [ordersInProgress.length, inProgressPageSize, inProgressPage]);
+
+  const paginatedProductList = useMemo(() => {
+    const start = (productPage - 1) * productPageSize;
+    return productList.slice(start, start + productPageSize);
+  }, [productList, productPage, productPageSize]);
+
+  const paginatedSold = useMemo(() => {
+    const start = (soldPage - 1) * soldPageSize;
+    return productsSold.slice(start, start + soldPageSize);
+  }, [productsSold, soldPage, soldPageSize]);
+
+  const paginatedInProgress = useMemo(() => {
+    const start = (inProgressPage - 1) * inProgressPageSize;
+    return ordersInProgress.slice(start, start + inProgressPageSize);
+  }, [ordersInProgress, inProgressPage, inProgressPageSize]);
 
   if (loading) {
     return (
@@ -171,28 +215,40 @@ export default function ReportPage() {
           <List className="w-5 h-5 text-[var(--brand-blue)]" />
           Your product list
         </h2>
-        {report.productList && report.productList.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-left">
-                  <th className="px-4 py-3 font-medium text-neutral-400">Product name</th>
-                  <th className="px-4 py-3 font-medium text-neutral-400">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.productList.map((p) => (
-                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.03]">
-                    <td className="px-4 py-3 text-[var(--brand-white)]">{p.name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.status === "active" ? "bg-emerald-500/20 text-emerald-400" : "bg-neutral-500/20 text-neutral-400"}`}>
-                        {p.status}
-                      </span>
-                    </td>
+        {productList.length > 0 ? (
+          <div>
+            <div className="overflow-x-auto rounded-xl border border-white/10">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-left">
+                    <th className="px-4 py-3 font-medium text-neutral-400">Product name</th>
+                    <th className="px-4 py-3 font-medium text-neutral-400">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedProductList.map((p) => (
+                    <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                      <td className="px-4 py-3 text-[var(--brand-white)]">{p.name}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.status === "active" ? "bg-emerald-500/20 text-emerald-400" : "bg-neutral-500/20 text-neutral-400"}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationBar
+              page={productPage}
+              pageSize={productPageSize}
+              total={productList.length}
+              onPageChange={setProductPage}
+              onPageSizeChange={(n) => {
+                setProductPageSize(n);
+                setProductPage(1);
+              }}
+            />
           </div>
         ) : (
           <p className="text-neutral-500 py-6">No products yet. Add products from the Products page.</p>
@@ -213,26 +269,41 @@ export default function ReportPage() {
             <span className="text-sm font-normal text-neutral-400">({report.soldCount} items)</span>
           )}
         </h2>
-        {report.productsSold && report.productsSold.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-left">
-                  <th className="px-4 py-3 font-medium text-neutral-400">Product name</th>
-                  <th className="px-4 py-3 font-medium text-neutral-400">Qty</th>
-                  <th className="px-4 py-3 font-medium text-neutral-400">Order ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.productsSold.map((item, i) => (
-                  <tr key={`${item.orderId}-${i}`} className="border-b border-white/5 hover:bg-white/[0.03]">
-                    <td className="px-4 py-3 text-[var(--brand-white)]">{item.productName}</td>
-                    <td className="px-4 py-3 text-neutral-300">{item.quantity}</td>
-                    <td className="px-4 py-3 text-neutral-500 font-mono text-xs">{item.orderId.slice(-8)}</td>
+        {productsSold.length > 0 ? (
+          <div>
+            <div className="overflow-x-auto rounded-xl border border-white/10">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-left">
+                    <th className="px-4 py-3 font-medium text-neutral-400">Product name</th>
+                    <th className="px-4 py-3 font-medium text-neutral-400">Qty</th>
+                    <th className="px-4 py-3 font-medium text-neutral-400">Order ID</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedSold.map((item, idx) => {
+                    const globalI = (soldPage - 1) * soldPageSize + idx;
+                    return (
+                      <tr key={`${item.orderId}-${globalI}`} className="border-b border-white/5 hover:bg-white/[0.03]">
+                        <td className="px-4 py-3 text-[var(--brand-white)]">{item.productName}</td>
+                        <td className="px-4 py-3 text-neutral-300">{item.quantity}</td>
+                        <td className="px-4 py-3 text-neutral-500 font-mono text-xs">{item.orderId.slice(-8)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationBar
+              page={soldPage}
+              pageSize={soldPageSize}
+              total={productsSold.length}
+              onPageChange={setSoldPage}
+              onPageSizeChange={(n) => {
+                setSoldPageSize(n);
+                setSoldPage(1);
+              }}
+            />
           </div>
         ) : (
           <p className="text-neutral-500 py-6">No sales yet. Completed orders will appear here.</p>
@@ -249,28 +320,40 @@ export default function ReportPage() {
         <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)] mb-4">
           <Clock className="w-5 h-5 text-amber-500" />
           Orders in progress
-          {report.ordersInProgress && report.ordersInProgress.length > 0 && (
-            <span className="text-sm font-normal text-neutral-400">({report.ordersInProgress.length} orders)</span>
+          {ordersInProgress.length > 0 && (
+            <span className="text-sm font-normal text-neutral-400">({ordersInProgress.length} orders)</span>
           )}
         </h2>
-        {report.ordersInProgress && report.ordersInProgress.length > 0 ? (
-          <div className="space-y-4">
-            {report.ordersInProgress.map((order) => (
-              <div key={order.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                  <span className="text-xs text-neutral-500 font-mono">Order #{order.id.slice(-8)}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${order.status === "in_progress" ? "bg-amber-500/20 text-amber-400" : "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]"}`}>
-                    {order.status.replace("_", " ")}
-                  </span>
+        {ordersInProgress.length > 0 ? (
+          <div>
+            <div className="space-y-4">
+              {paginatedInProgress.map((order) => (
+                <div key={order.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <span className="text-xs text-neutral-500 font-mono">Order #{order.id.slice(-8)}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${order.status === "in_progress" ? "bg-amber-500/20 text-amber-400" : "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]"}`}>
+                      {order.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-neutral-400 mb-2">Total: ${order.total.toFixed(2)}</p>
+                  <ul className="text-sm text-[var(--brand-white)] space-y-1">
+                    {order.items.map((item, i) => (
+                      <li key={i}>{item.productName} × {item.quantity} — ${(item.price * item.quantity).toFixed(2)}</li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="text-sm text-neutral-400 mb-2">Total: ${order.total.toFixed(2)}</p>
-                <ul className="text-sm text-[var(--brand-white)] space-y-1">
-                  {order.items.map((item, i) => (
-                    <li key={i}>{item.productName} × {item.quantity} — ${(item.price * item.quantity).toFixed(2)}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              ))}
+            </div>
+            <TablePaginationBar
+              page={inProgressPage}
+              pageSize={inProgressPageSize}
+              total={ordersInProgress.length}
+              onPageChange={setInProgressPage}
+              onPageSizeChange={(n) => {
+                setInProgressPageSize(n);
+                setInProgressPage(1);
+              }}
+            />
           </div>
         ) : (
           <p className="text-neutral-500 py-6">No orders in progress. Pending or in-progress orders will appear here.</p>

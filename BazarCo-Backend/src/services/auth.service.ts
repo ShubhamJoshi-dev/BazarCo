@@ -8,22 +8,22 @@ import type { JwtPayload } from "../interfaces/auth";
 
 const SALT_ROUNDS = 10;
 
-export async function signup(email: string, password: string, name?: string) {
+export async function signup(email: string, password: string, name?: string, role?: "buyer" | "seller") {
   const existing = await userRepo.findByEmail(email);
   if (existing) {
     return { success: false, reason: "email_exists" as const };
   }
   const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await userRepo.createUser({ email, password: hashed, name });
+  const user = await userRepo.createUser({ email, password: hashed, name, role });
   const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
   const token = signToken(payload);
-  const role = (user as { role?: string }).role ?? "buyer";
+  const savedRole = (user as { role?: string }).role ?? "buyer";
   const rating = (user as { rating?: number }).rating ?? 0;
   const ratingCount = (user as { ratingCount?: number }).ratingCount ?? 0;
   return {
     success: true,
     token,
-    user: { id: user._id.toString(), email: user.email, name: user.name, role, rating, ratingCount },
+    user: { id: user._id.toString(), email: user.email, name: user.name, role: savedRole, rating, ratingCount },
   };
 }
 

@@ -5,11 +5,11 @@ import { emailHelper } from "../helpers/email.helper";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { uploadDocument, isCloudinaryConfigured, deleteByPublicId } from "../services/cloudinary.service";
-import { extractNepalNationalId } from "../services/ocr.service";
+import { extractNepalNationalId, extractCompanyCard } from "../services/ocr.service";
 import * as documentRepo from "../repositories/document.repository";
 import * as kycRepo from "../repositories/kycVerification.repository";
 import * as userRepo from "../repositories/user.repository";
-import type { DocumentType, NepalIdExtractedData } from "../models/document.model";
+import type { DocumentType, NepalIdExtractedData, CompanyCardExtractedData } from "../models/document.model";
 
 type AuthUser = { id: string; email: string; name?: string; role: string };
 type ReqWithUser = { user?: AuthUser; file?: Express.Multer.File; body: Record<string, unknown> };
@@ -48,8 +48,10 @@ export async function uploadKycDocument(
       return;
     }
 
-    // For national ID, validate with OCR first; reject if not a valid Nepal national ID (e.g. photo/selfie).
+    // For national ID, validate with OCR first; reject if not a valid Nepal national ID.
     let nationalIdExtraction: { extractedData: NepalIdExtractedData; isValidNationalId: boolean; extractionStatus: "success" | "invalid" } | null = null;
+    let companyCardExtraction: { extractedData: CompanyCardExtractedData; isValidCompanyCard: boolean; extractionStatus: "success" | "invalid" } | null = null;
+
     if (documentType === "national_card" && file.buffer) {
       try {
         const extraction = await extractNepalNationalId(Buffer.from(file.buffer));
@@ -64,6 +66,24 @@ export async function uploadKycDocument(
         nationalIdExtraction = extraction;
       } catch (ocrErr) {
         logger.error("KYC OCR validation failed", ocrErr);
+        errorResponse(res, 500, "Document validation failed. Please try again.");
+        return;
+      }
+    }
+
+    if (documentType === "company_card" && file.buffer) {
+      try {
+        companyCardExtraction = await extractCompanyCard(Buffer.from(file.buffer));
+        if (!companyCardExtraction.isValidCompanyCard || companyCardExtraction.extractionStatus === "invalid") {
+          errorResponse(
+            res,
+            400,
+            "Please upload a valid company registration card or PAN certificate. This image does not appear to be a valid business document."
+          );
+          return;
+        }
+      } catch (ocrErr) {
+        logger.error("KYC company card OCR failed", ocrErr);
         errorResponse(res, 500, "Document validation failed. Please try again.");
         return;
       }
@@ -89,6 +109,15 @@ export async function uploadKycDocument(
       extractedData: nationalIdExtraction.extractedData,
       isValidNationalId: nationalIdExtraction.isValidNationalId,
       extractionStatus: nationalIdExtraction.extractionStatus,
+    });
+  }
+
+  if (documentType === "company_card" && companyCardExtraction) {
+    const docIdStr = docId.toString();
+    await documentRepo.updateExtraction(docIdStr, user.id, {
+      extractedData: companyCardExtraction.extractedData,
+      isValidNationalId: companyCardExtraction.isValidCompanyCard,
+      extractionStatus: companyCardExtraction.extractionStatus,
     });
   }
 

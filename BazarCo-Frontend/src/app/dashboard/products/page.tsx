@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/contexts/ToastContext";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { TablePaginationBar } from "@/components/dashboard/TablePaginationBar";
 
 type Filter = "all" | "active" | "archived";
 
@@ -47,6 +48,8 @@ export default function ProductsPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [kycVerified, setKycVerified] = useState<boolean | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(5);
 
   const isSeller = user?.role === "seller";
 
@@ -62,6 +65,20 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [filter]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(products.length / listPageSize));
+    if (listPage > totalPages) setListPage(totalPages);
+  }, [products.length, listPageSize, listPage]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (listPage - 1) * listPageSize;
+    return products.slice(start, start + listPageSize);
+  }, [products, listPage, listPageSize]);
 
   useEffect(() => {
     if (!isSeller) return;
@@ -199,9 +216,10 @@ export default function ProductsPage() {
           )}
         </motion.div>
       ) : (
+        <div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
-            {products.map((p, i) => (
+            {paginatedProducts.map((p, i) => (
               <motion.div
                 key={p.id}
                 layout
@@ -273,6 +291,18 @@ export default function ProductsPage() {
               </motion.div>
             ))}
           </AnimatePresence>
+        </div>
+        <TablePaginationBar
+          page={listPage}
+          pageSize={listPageSize}
+          total={products.length}
+          onPageChange={setListPage}
+          onPageSizeChange={(n) => {
+            setListPageSize(n);
+            setListPage(1);
+          }}
+          sizeOptions={[5, 10, 25]}
+        />
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import type { Types } from "mongoose";
-import { Document, type DocumentType, type NepalIdExtractedData } from "../models/document.model";
+import { Document, type DocumentType, type NepalIdExtractedData, type CompanyCardExtractedData } from "../models/document.model";
 
 export async function createDocument(data: {
   userId: string | Types.ObjectId;
@@ -34,7 +34,7 @@ export async function updateExtraction(
   documentId: string,
   userId: string,
   data: {
-    extractedData?: NepalIdExtractedData;
+    extractedData?: NepalIdExtractedData | CompanyCardExtractedData;
     isValidNationalId?: boolean;
     extractionStatus: "pending" | "success" | "failed" | "invalid";
     extractionError?: string;

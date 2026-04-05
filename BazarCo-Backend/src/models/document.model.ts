@@ -23,6 +23,21 @@ export interface NepalIdExtractedData {
   rawText?: string;
 }
 
+/** Company registration card / PAN card extracted fields */
+export interface CompanyCardExtractedData {
+  companyName?: string;
+  registrationNumber?: string;
+  panNumber?: string;
+  vatNumber?: string;
+  companyType?: string;
+  address?: string;
+  registeredDate?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  ownerName?: string;
+  rawText?: string;
+}
+
 const documentSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

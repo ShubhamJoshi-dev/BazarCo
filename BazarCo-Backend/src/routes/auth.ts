@@ -3,6 +3,7 @@ import {
   getMe,
   patchProfile,
   postLogin,
+  postSignup,
   postDevLogin,
   postForgotPassword,
   postResetPassword,
@@ -11,6 +12,7 @@ import { requireAuth } from "../middleware/auth.middleware";
 
 export const authRouter = Router();
 
+authRouter.post("/signup", postSignup);
 authRouter.post("/login", postLogin);
 authRouter.post("/dev-login", postDevLogin);
 authRouter.post("/forgot-password", postForgotPassword);

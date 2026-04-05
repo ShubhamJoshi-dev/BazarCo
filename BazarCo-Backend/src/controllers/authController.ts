@@ -21,6 +21,8 @@ export async function postSignup(req: Request, res: Response): Promise<void> {
   const email = parseString(req.body, "email");
   const password = parseString(req.body, "password");
   const name = parseString(req.body, "name");
+  const roleRaw = parseString(req.body, "role");
+  const role: "buyer" | "seller" = roleRaw === "seller" ? "seller" : "buyer";
 
   if (!validateEmail(email)) {
     errorResponse(res, 400, "Valid email is required");
@@ -33,7 +35,7 @@ export async function postSignup(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const result = await authService.signup(email!, password!, name ?? undefined);
+    const result = await authService.signup(email!, password!, name ?? undefined, role);
     if (!result.success) {
       if (result.reason === "email_exists") {
         errorResponse(res, 409, "An account with this email already exists");

@@ -8,3 +8,4 @@ coverage/
 .nyc_output/
 nep.traineddata
 eng.traineddata
+CLAUDE.md

@@ -349,6 +349,11 @@ export async function browseProducts(req: ReqWithUser, res: Response): Promise<v
       : [];
   const page = Math.max(0, parseInt(String(req.query.page), 10) || 0);
   const limit = Math.min(48, Math.max(12, parseInt(String(req.query.limit), 10) || 24));
+  const sortBy = (["newest", "price-asc", "price-desc", "name-asc"] as const).includes(
+    req.query.sortBy as "newest" | "price-asc" | "price-desc" | "name-asc"
+  ) ? (req.query.sortBy as "newest" | "price-asc" | "price-desc" | "name-asc") : "newest";
+  const minPrice = req.query.minPrice ? parseFloat(String(req.query.minPrice)) : undefined;
+  const maxPrice = req.query.maxPrice ? parseFloat(String(req.query.maxPrice)) : undefined;
 
   const categoriesList = await categoryRepo.listCategories();
   const tagsList = await tagRepo.listTags();
@@ -392,6 +397,9 @@ export async function browseProducts(req: ReqWithUser, res: Response): Promise<v
     query: q || undefined,
     categoryId,
     tagIds: tagIds.length ? tagIds : undefined,
+    minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
+    maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
+    sortBy,
     limit,
     skip: page * limit,
   });
