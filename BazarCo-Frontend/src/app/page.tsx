@@ -1,9 +1,5 @@
-import { ComingSoonHero } from "@/components/ComingSoonHero";
+import { HomePageClient } from "@/components/HomePageClient";
 
 export default function Home() {
-  return (
-    <main className="min-h-screen bg-[var(--background)]">
-      <ComingSoonHero />
-    </main>
-  );
+  return <HomePageClient />;
 }

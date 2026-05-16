@@ -78,13 +78,22 @@ function isAuthSuccess(data: AuthResponse): data is AuthSuccessResponse {
   return data.status === "success" && "token" in data;
 }
 
-export async function authSignup(email: string, password: string, name?: string, role?: "buyer" | "seller"): Promise<AuthResponse> {
+export async function authSignup(
+  email: string,
+  password: string,
+  name?: string,
+  role?: "buyer" | "seller",
+  options?: { acceptedSellerTerms?: boolean },
+): Promise<AuthResponse> {
   try {
     const { data } = await api.post<AuthResponse>("/auth/signup", {
       email: email.trim(),
       password,
       role: role ?? "buyer",
       ...(name?.trim() ? { name: name.trim() } : {}),
+      ...(role === "seller" && options?.acceptedSellerTerms
+        ? { acceptedSellerTerms: true }
+        : {}),
     });
     if (isAuthSuccess(data)) setStoredToken(data.token);
     return data;

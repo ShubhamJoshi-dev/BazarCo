@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BazarCo - Coming Soon",
-  description: "BazarCo is coming soon.",
+  title: "BazarCo — Marketplace for Nepal",
+  description: "Shop, sell, and bargain on BazarCo — Nepal's marketplace for buyers and sellers.",
 };
 
 export default function RootLayout({

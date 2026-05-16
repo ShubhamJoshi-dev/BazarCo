@@ -23,6 +23,7 @@ export async function postSignup(req: Request, res: Response): Promise<void> {
   const name = parseString(req.body, "name");
   const roleRaw = parseString(req.body, "role");
   const role: "buyer" | "seller" = roleRaw === "seller" ? "seller" : "buyer";
+  const acceptedSellerTerms = (req.body as Record<string, unknown>)?.acceptedSellerTerms === true;
 
   if (!validateEmail(email)) {
     errorResponse(res, 400, "Valid email is required");
@@ -31,6 +32,11 @@ export async function postSignup(req: Request, res: Response): Promise<void> {
   const pwdCheck = validatePasswordStrength(password ?? "");
   if (!pwdCheck.valid) {
     errorResponse(res, 400, pwdCheck.message ?? "Invalid password");
+    return;
+  }
+
+  if (role === "seller" && !acceptedSellerTerms) {
+    errorResponse(res, 400, "You must accept the seller agreement to create a seller account");
     return;
   }
 
