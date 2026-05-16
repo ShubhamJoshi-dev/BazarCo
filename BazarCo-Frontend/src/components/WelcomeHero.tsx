@@ -53,14 +53,20 @@ export function WelcomeHero() {
 
         <div className="flex gap-3 flex-wrap justify-center w-full">
           <Link
+            href="/dashboard/browse"
+            className="clay-btn-blue px-8 py-3.5 text-sm flex-1 sm:flex-none flex items-center justify-center min-w-[160px]"
+          >
+            Browse products
+          </Link>
+          <Link
             href="/signup"
-            className="clay-btn-red px-8 py-3.5 text-sm flex-1 sm:flex-none flex items-center justify-center min-w-[160px]"
+            className="clay-btn-red px-8 py-3.5 text-sm flex-1 sm:flex-none flex items-center justify-center min-w-[140px]"
           >
             Create account
           </Link>
           <Link
             href="/login"
-            className="clay-btn-blue px-8 py-3.5 text-sm flex-1 sm:flex-none flex items-center justify-center min-w-[140px]"
+            className="rounded-2xl border border-[var(--brand-border)] px-6 py-3.5 text-sm font-semibold flex-1 sm:flex-none flex items-center justify-center min-w-[120px] hover:bg-neutral-50"
           >
             Sign in
           </Link>

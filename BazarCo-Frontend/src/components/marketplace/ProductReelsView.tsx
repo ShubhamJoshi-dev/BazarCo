@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ChevronDown,
@@ -16,24 +18,37 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/contexts/AuthContext";
 import { listVideoFeed, recordVideoView, type VideoFeedItem } from "@/lib/api";
+import { getLoginHref } from "@/lib/loginRedirect";
 import { resolveMediaUrl } from "@/lib/videoMedia";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { SignInPromptModal } from "@/components/auth/SignInPromptModal";
+import { VideoCommentsSheet } from "@/components/marketplace/VideoCommentsSheet";
 
 function ReelSlide({
   video,
   isActive,
   onViewed,
+  isGuest,
+  onSignInRequired,
+  onGuestLike,
+  onOpenComments,
 }: {
   video: VideoFeedItem;
   isActive: boolean;
   onViewed: () => void;
+  isGuest: boolean;
+  onSignInRequired: () => void;
+  onGuestLike: () => void;
+  onOpenComments: () => void;
 }) {
   const t = useTranslations("productReels");
   const { formatPrice } = useCurrency();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [liked, setLiked] = useState(false);
+  const [heartPulse, setHeartPulse] = useState(false);
   const viewedRef = useRef(false);
   const src = resolveMediaUrl(video.videoUrl);
   const product = video.product;
@@ -71,7 +86,7 @@ function ReelSlide({
       <div className="absolute inset-0 flex flex-col justify-between p-4 pb-8 pt-3 pointer-events-none">
         <div className="pointer-events-auto flex items-center justify-between">
           <Link
-            href="/dashboard"
+            href={isGuest ? "/dashboard/browse" : "/dashboard"}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/55"
             aria-label={t("back")}
           >
@@ -119,20 +134,49 @@ function ReelSlide({
           <div className="flex flex-col items-center gap-4 pb-2 shrink-0">
             <button
               type="button"
-              onClick={() => setLiked((l) => !l)}
+              onClick={() => {
+                if (isGuest) {
+                  setHeartPulse(true);
+                  onGuestLike();
+                  window.setTimeout(() => setHeartPulse(false), 500);
+                  return;
+                }
+                setLiked((l) => !l);
+              }}
               className="flex flex-col items-center gap-1 text-white"
-              aria-label={t("like")}
+              aria-label={isGuest ? t("signInToLike") : t("like")}
             >
-              <span
+              <motion.span
+                animate={
+                  heartPulse
+                    ? { scale: [1, 1.2, 1], backgroundColor: "rgba(198, 40, 40, 0.85)" }
+                    : { scale: 1 }
+                }
+                transition={{ duration: 0.35 }}
                 className={`flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-sm ${
                   liked ? "bg-[var(--brand-red)]" : "bg-black/40"
                 }`}
               >
-                <Heart className={`h-6 w-6 ${liked ? "fill-white" : ""}`} />
-              </span>
+                <Heart
+                  className={`h-6 w-6 transition-colors ${
+                    liked || heartPulse ? "fill-white text-white" : ""
+                  }`}
+                />
+              </motion.span>
               <span className="text-[10px] font-semibold">
                 {(video.likes + (liked ? 1 : 0)).toLocaleString()}
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenComments}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label={t("comments")}
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
+                <MessageCircle className="h-6 w-6" />
+              </span>
+              <span className="text-[10px] font-semibold">{video.comments.toLocaleString()}</span>
             </button>
             <button
               type="button"
@@ -143,15 +187,28 @@ function ReelSlide({
               {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
             </button>
             {video.allowBargaining && product && (
-              <Link
-                href={`${productHref}#offer`}
-                className="flex flex-col items-center gap-1 text-white"
-              >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
-                  <HandCoins className="h-6 w-6" />
-                </span>
-                <span className="text-[10px] font-semibold">{t("bargain")}</span>
-              </Link>
+              isGuest ? (
+                <button
+                  type="button"
+                  onClick={onSignInRequired}
+                  className="flex flex-col items-center gap-1 text-white"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
+                    <HandCoins className="h-6 w-6" />
+                  </span>
+                  <span className="text-[10px] font-semibold">{t("bargain")}</span>
+                </button>
+              ) : (
+                <Link
+                  href={`${productHref}#offer`}
+                  className="flex flex-col items-center gap-1 text-white"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
+                    <HandCoins className="h-6 w-6" />
+                  </span>
+                  <span className="text-[10px] font-semibold">{t("bargain")}</span>
+                </Link>
+              )
             )}
             <Link href={productHref} className="flex flex-col items-center gap-1 text-white">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-red)] shadow-lg">
@@ -174,12 +231,41 @@ export function ProductReelsView({
   startVideoId?: string | null;
 }) {
   const t = useTranslations("productReels");
+  const { user } = useAuth();
+  const pathname = usePathname() ?? "/dashboard/reels";
+  const searchParams = useSearchParams();
+  const isGuest = !user;
+  const [signInModalOpen, setSignInModalOpen] = useState(false);
+  const returnPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+  const signInHref = getLoginHref(returnPath);
+
+  const openSignInModal = useCallback(() => setSignInModalOpen(true), []);
+  const closeSignInModal = useCallback(() => setSignInModalOpen(false), []);
+
   const [videos, setVideos] = useState<VideoFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsVideoId, setCommentsVideoId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const openComments = useCallback((videoId: string) => {
+    setCommentsVideoId(videoId);
+    setCommentsOpen(true);
+  }, []);
+
+  const closeComments = useCallback(() => {
+    setCommentsOpen(false);
+  }, []);
+
+  const handleCommentTotalChange = useCallback((total: number) => {
+    if (!commentsVideoId) return;
+    setVideos((prev) =>
+      prev.map((v) => (v.id === commentsVideoId ? { ...v, comments: total } : v)),
+    );
+  }, [commentsVideoId]);
 
   const scrollToIndex = useCallback((index: number, smooth = true) => {
     const clamped = Math.max(0, Math.min(index, videos.length - 1));
@@ -192,7 +278,10 @@ export function ProductReelsView({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const list = await listVideoFeed({ limit: 40 });
+    const list = await listVideoFeed({
+      limit: 40,
+      ...(productId ? { productId } : {}),
+    });
     setVideos(list);
     setLoading(false);
 
@@ -200,12 +289,6 @@ export function ProductReelsView({
     if (startVideoId) {
       const byId = list.findIndex((v) => v.id === startVideoId);
       if (byId >= 0) startIdx = byId;
-    } else if (productId) {
-      const byProduct = list.findIndex(
-        (v) =>
-          v.product?.id === productId || v.linkedProductIds.includes(productId),
-      );
-      if (byProduct >= 0) startIdx = byProduct;
     }
     setActiveIndex(startIdx);
   }, [productId, startVideoId]);
@@ -271,16 +354,21 @@ export function ProductReelsView({
   }
 
   if (videos.length === 0) {
+    const backHref = productId ? `/dashboard/product/${productId}` : "/dashboard/browse";
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-neutral-900 text-white px-6 text-center">
         <MessageCircle className="h-12 w-12 text-neutral-500" />
-        <p className="font-bold text-lg">{t("emptyTitle")}</p>
-        <p className="text-sm text-neutral-400 max-w-sm">{t("emptyHint")}</p>
+        <p className="font-bold text-lg">
+          {productId ? t("noProductVideoTitle") : t("emptyTitle")}
+        </p>
+        <p className="text-sm text-neutral-400 max-w-sm">
+          {productId ? t("noProductVideoHint") : t("emptyHint")}
+        </p>
         <Link
-          href="/dashboard/browse"
+          href={backHref}
           className="rounded-xl bg-[var(--brand-red)] px-5 py-2.5 text-sm font-semibold text-white"
         >
-          {t("browseProducts")}
+          {productId ? t("backToProduct") : t("browseProducts")}
         </Link>
       </div>
     );
@@ -292,6 +380,24 @@ export function ProductReelsView({
 
   return (
     <div className="absolute inset-0 bg-black">
+      <SignInPromptModal
+        open={signInModalOpen}
+        title={t("signInModalTitle")}
+        message={t("signInModalMessage")}
+        confirmLabel={t("signInModalConfirm")}
+        cancelLabel={t("signInModalCancel")}
+        signUpLabel={t("signInModalSignUp")}
+        signInHref={signInHref}
+        onClose={closeSignInModal}
+      />
+      <VideoCommentsSheet
+        open={commentsOpen}
+        videoId={commentsVideoId}
+        onClose={closeComments}
+        isGuest={isGuest}
+        onSignInRequired={openSignInModal}
+        onTotalChange={handleCommentTotalChange}
+      />
       <div
         ref={containerRef}
         className="h-full w-full overflow-y-scroll overscroll-y-contain snap-y snap-mandatory scrollbar-hide touch-pan-y"
@@ -310,6 +416,10 @@ export function ProductReelsView({
               video={video}
               isActive={index === activeIndex}
               onViewed={() => recordVideoView(video.id)}
+              isGuest={isGuest}
+              onSignInRequired={openSignInModal}
+              onGuestLike={openSignInModal}
+              onOpenComments={() => openComments(video.id)}
             />
           </div>
         ))}

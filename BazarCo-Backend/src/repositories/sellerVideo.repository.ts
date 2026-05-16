@@ -33,6 +33,15 @@ export async function findByIdForSeller(id: string, sellerId: string) {
   return SellerVideo.findOne({ _id: id, sellerId: sellerObjectId(sellerId) }).lean();
 }
 
+export async function findPublicById(id: string) {
+  if (!/^[a-fA-F0-9]{24}$/.test(id)) return null;
+  return SellerVideo.findOne({
+    _id: id,
+    status: { $in: ["live", "categorized"] },
+    visibility: "public",
+  }).lean();
+}
+
 export async function findBySeller(
   sellerId: string,
   opts?: { status?: SellerVideoStatus; q?: string },
@@ -62,20 +71,25 @@ export async function deleteVideo(id: string, sellerId: string) {
   return r.deletedCount > 0;
 }
 
-export async function findPublicFeed(opts?: {
-  productId?: string;
-  limit?: number;
-  skip?: number;
-}) {
+function publicVideoQuery(productId?: string) {
   const mongoose = require("mongoose") as typeof import("mongoose");
   const query: Record<string, unknown> = {
     status: { $in: ["live", "categorized"] },
     visibility: "public",
     videoUrl: { $exists: true, $nin: ["", null] },
   };
-  if (opts?.productId && /^[a-fA-F0-9]{24}$/.test(opts.productId)) {
-    query.linkedProductIds = new mongoose.Types.ObjectId(opts.productId);
+  if (productId && /^[a-fA-F0-9]{24}$/.test(productId)) {
+    query.linkedProductIds = new mongoose.Types.ObjectId(productId);
   }
+  return query;
+}
+
+export async function findPublicFeed(opts?: {
+  productId?: string;
+  limit?: number;
+  skip?: number;
+}) {
+  const query = publicVideoQuery(opts?.productId);
   const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 50);
   const skip = Math.max(opts?.skip ?? 0, 0);
   return SellerVideo.find(query)
@@ -89,6 +103,21 @@ export async function findPublicFeed(opts?: {
 
 export async function incrementViews(id: string) {
   await SellerVideo.updateOne({ _id: id }, { $inc: { views: 1 } });
+}
+
+export async function countPublicVideosForProduct(productId: string): Promise<number> {
+  if (!/^[a-fA-F0-9]{24}$/.test(productId)) return 0;
+  return SellerVideo.countDocuments(publicVideoQuery(productId));
+}
+
+export async function findFirstPublicVideoIdForProduct(productId: string): Promise<string | null> {
+  if (!/^[a-fA-F0-9]{24}$/.test(productId)) return null;
+  const doc = await SellerVideo.findOne(publicVideoQuery(productId))
+    .sort({ publishedAt: -1, updatedAt: -1 })
+    .select("_id")
+    .lean();
+  if (!doc || !(doc as { _id?: Types.ObjectId })._id) return null;
+  return (doc as { _id: Types.ObjectId })._id.toString();
 }
 
 export async function insightsForSeller(sellerId: string) {

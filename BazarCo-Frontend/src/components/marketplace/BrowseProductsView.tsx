@@ -12,8 +12,10 @@ import {
   Heart,
   ImageIcon,
   Package,
+  Search,
   ShoppingCart,
   Star,
+  X,
 } from "lucide-react";
 import type { Product, Category, Tag } from "@/types/api";
 import {
@@ -79,11 +81,14 @@ export function BrowseProductsView() {
   useEffect(() => {
     const cat = searchParams.get("category");
     const sort = searchParams.get("sort");
+    const q = searchParams.get("q") ?? "";
     if (cat) {
       setCategoryId(cat);
       setDraftCategory(cat);
     }
     if (sort === "new") setSortBy("newest");
+    setQuery(q);
+    setDebouncedQuery(q);
   }, [searchParams]);
 
   useEffect(() => {
@@ -152,6 +157,8 @@ export function BrowseProductsView() {
     setMaxPrice("");
     setMinRating(null);
     setSelectedBrands([]);
+    setQuery("");
+    setDebouncedQuery("");
     setPage(0);
   };
 
@@ -352,6 +359,31 @@ export function BrowseProductsView() {
             </div>
           </div>
 
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              aria-label={t("searchPlaceholder")}
+              className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-11 pr-11 text-sm shadow-sm outline-none transition-colors placeholder:text-[var(--brand-muted)] focus:border-[var(--brand-red)] dark:bg-[var(--card-bg)]"
+            />
+            {query.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[var(--brand-muted)] hover:bg-neutral-100 hover:text-[var(--foreground)]"
+                aria-label={t("clearSearch")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           <div className="lg:hidden">
             <button
               type="button"
@@ -383,7 +415,9 @@ export function BrowseProductsView() {
           {!loading && !fetchError && filteredProducts.length === 0 && (
             <div className="rounded-xl border border-neutral-200 p-12 text-center">
               <Package className="mx-auto h-12 w-12 text-neutral-300 mb-3" />
-              <p className="font-bold">{t("noResults")}</p>
+              <p className="font-bold">
+                {debouncedQuery.trim() ? t("noSearchResults") : t("noResults")}
+              </p>
             </div>
           )}
 

@@ -885,7 +885,10 @@
     "breadcrumbHome": "Home",
     "breadcrumbAll": "All Categories",
     "title": "Browse Products",
+    "searchPlaceholder": "Search products by name or description…",
+    "clearSearch": "Clear search",
     "showing": "Showing {from}–{to} of {total} results",
+    "noSearchResults": "No products match your search. Try different keywords or clear filters.",
     "sortBy": "Sort by:",
     "sortPopularity": "Popularity",
     "sortPriceAsc": "Price: Low to High",
@@ -941,7 +944,18 @@
     "boxWarranty": "Warranty card",
     "boxCable": "Charging cable",
     "youMayLike": "You may also like",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "guestSignInTitle": "Sign in to purchase",
+    "guestSignInHint": "You can browse products and watch shop videos for free. Create an account or sign in to buy, bargain, and message sellers.",
+    "signInToBuy": "Sign in to buy",
+    "signInToCart": "Sign in to add to cart",
+    "signInToMessage": "Sign in to message seller"
+  },
+  "publicMarketplace": {
+    "shopVideos": "Shop videos",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "footerHint": "Sign in to buy, bargain, and track your orders on BazarCo."
   },
   "favouritesPage": {
     "title": "My Favorites",
@@ -969,6 +983,12 @@
     "shopVideos": "Shop videos",
     "back": "Back",
     "like": "Like",
+    "signInToLike": "Sign in to like",
+    "signInModalTitle": "Sign in first",
+    "signInModalMessage": "Create an account or sign in to like videos, bargain with sellers, and checkout.",
+    "signInModalConfirm": "Sign in",
+    "signInModalSignUp": "Create account",
+    "signInModalCancel": "Keep watching",
     "mute": "Mute",
     "unmute": "Unmute",
     "bargain": "Bargain",
@@ -980,7 +1000,22 @@
     "scrollHint": "Scroll or swipe for next video",
     "nextVideo": "Next video",
     "prevVideo": "Previous video",
-    "feedLabel": "Product video feed"
+    "comments": "Comments",
+    "feedLabel": "Product video feed",
+    "noProductVideoTitle": "No video for this product",
+    "noProductVideoHint": "This listing does not have a shop video yet. Browse other products or return to the product page.",
+    "backToProduct": "Back to product"
+  },
+  "videoComments": {
+    "title": "Comments",
+    "close": "Close",
+    "empty": "No comments yet. Be the first to comment!",
+    "placeholder": "Add a comment…",
+    "signInToComment": "Sign in to comment",
+    "post": "Post comment",
+    "reply": "Reply",
+    "replyingTo": "Replying to {name}",
+    "cancelReply": "Cancel"
   },
   "buyerCheckout": {
     "subtitle": "Review your order and complete secure payment",

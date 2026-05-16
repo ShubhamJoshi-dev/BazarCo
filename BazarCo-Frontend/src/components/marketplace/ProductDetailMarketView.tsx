@@ -45,6 +45,7 @@ type Props = {
   addingToCart: boolean;
   onAddToCart: () => void;
   onBuyNow: () => void;
+  onSignInRequired: () => void;
   reviewsSection: ReactNode;
 };
 
@@ -66,6 +67,7 @@ export function ProductDetailMarketView({
   addingToCart,
   onAddToCart,
   onBuyNow,
+  onSignInRequired,
   reviewsSection,
 }: Props) {
   const t = useTranslations("productDetail");
@@ -74,7 +76,11 @@ export function ProductDetailMarketView({
   const tChat = useTranslations("chat");
   const tDB = useTranslations("dashboard");
   const { formatPrice } = useCurrency();
-  const { product, reviewCount, averageRating, sellerKycVerified } = data;
+  const { product, reviewCount, averageRating, sellerKycVerified, productVideoCount, primaryVideoId } = data;
+  const hasProductVideo = (productVideoCount ?? 0) > 0;
+  const reelHref =
+    hasProductVideo &&
+    `/dashboard/reels?product=${product.id}${primaryVideoId ? `&v=${primaryVideoId}` : ""}`;
   const [related, setRelated] = useState<Product[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -86,7 +92,9 @@ export function ProductDetailMarketView({
   const displayReviews = reviewCount > 0 ? reviewCount : pseudoReviews(product.id);
   const avgBargain = Math.round(price * 0.94);
 
-  const isBuyer = user && user.id !== product.sellerId;
+  const isGuest = !user;
+  const isBuyer = Boolean(user && user.id !== product.sellerId);
+  const homeHref = isGuest ? "/" : "/dashboard";
 
   useEffect(() => {
     browseProducts({
@@ -113,7 +121,7 @@ export function ProductDetailMarketView({
   return (
     <div className="w-full max-w-[1200px] mx-auto space-y-10 pb-12">
       <nav className="text-xs text-[var(--brand-muted)]" aria-label="Breadcrumb">
-        <Link href="/dashboard" className="hover:text-[var(--foreground)]">{t("breadcrumbHome")}</Link>
+        <Link href={homeHref} className="hover:text-[var(--foreground)]">{t("breadcrumbHome")}</Link>
         <span className="mx-1.5">/</span>
         <Link href="/dashboard/browse" className="hover:text-[var(--foreground)]">{t("breadcrumbBrowse")}</Link>
         {product.category && (
@@ -163,15 +171,15 @@ export function ProductDetailMarketView({
               )}
             </div>
           )}
-          {isBuyer && (
+          {hasProductVideo && reelHref ? (
             <Link
-              href={`/dashboard/reels?product=${product.id}`}
+              href={reelHref}
               className="mt-3 flex items-center justify-center gap-2 w-full rounded-xl bg-[var(--brand-red)] text-white py-3 text-sm font-bold hover:bg-[#b71c1c] transition-colors shadow-sm"
             >
               <Play className="h-5 w-5 fill-white" />
               {tReels("watchReel")}
             </Link>
-          )}
+          ) : null}
         </div>
 
         {/* Purchase panel */}
@@ -205,6 +213,20 @@ export function ProductDetailMarketView({
               </span>
             )}
           </div>
+
+          {isGuest && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
+              <p className="font-semibold">{t("guestSignInTitle")}</p>
+              <p className="mt-1 text-amber-900/80 text-xs leading-relaxed">{t("guestSignInHint")}</p>
+              <button
+                type="button"
+                onClick={onSignInRequired}
+                className="mt-3 w-full rounded-lg bg-[var(--brand-red)] py-2.5 text-sm font-bold text-white hover:bg-[#b71c1c]"
+              >
+                {t("signInToBuy")}
+              </button>
+            </div>
+          )}
 
           {isBuyer && (
             <div id="offer" className="rounded-xl border border-sky-200 bg-sky-50/80 dark:bg-sky-950/30 p-4 space-y-3">
@@ -253,32 +275,54 @@ export function ProductDetailMarketView({
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              onClick={onBuyNow}
-              disabled={addingToCart}
-              className="flex-1 rounded-xl bg-[var(--brand-red)] py-3.5 text-sm font-bold text-white hover:bg-[#b71c1c] disabled:opacity-60"
-            >
-              {t("buyNow")}
-            </button>
-            <button
-              type="button"
-              onClick={onAddToCart}
-              disabled={addingToCart}
-              className="flex-1 rounded-xl border-2 border-[var(--brand-red)] py-3.5 text-sm font-bold text-[var(--brand-red)] hover:bg-[var(--brand-red)]/5 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {addingToCart ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-              {t("addToCart")}
-            </button>
-            <button
-              type="button"
-              onClick={onLike}
-              className="rounded-xl border border-neutral-200 p-3.5 hover:bg-neutral-50"
-              aria-label={liked ? t("unlike") : t("like")}
-            >
-              <Heart className={`h-5 w-5 ${liked ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : ""}`} />
-              <span className="sr-only">{likeCount}</span>
-            </button>
+            {isGuest ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onSignInRequired}
+                  className="flex-1 rounded-xl bg-[var(--brand-red)] py-3.5 text-sm font-bold text-white hover:bg-[#b71c1c]"
+                >
+                  {t("signInToBuy")}
+                </button>
+                <button
+                  type="button"
+                  onClick={onSignInRequired}
+                  className="flex-1 rounded-xl border-2 border-[var(--brand-red)] py-3.5 text-sm font-bold text-[var(--brand-red)] hover:bg-[var(--brand-red)]/5 flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {t("signInToCart")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onBuyNow}
+                  disabled={addingToCart}
+                  className="flex-1 rounded-xl bg-[var(--brand-red)] py-3.5 text-sm font-bold text-white hover:bg-[#b71c1c] disabled:opacity-60"
+                >
+                  {t("buyNow")}
+                </button>
+                <button
+                  type="button"
+                  onClick={onAddToCart}
+                  disabled={addingToCart}
+                  className="flex-1 rounded-xl border-2 border-[var(--brand-red)] py-3.5 text-sm font-bold text-[var(--brand-red)] hover:bg-[var(--brand-red)]/5 disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {addingToCart ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                  {t("addToCart")}
+                </button>
+                <button
+                  type="button"
+                  onClick={onLike}
+                  className="rounded-xl border border-neutral-200 p-3.5 hover:bg-neutral-50"
+                  aria-label={liked ? t("unlike") : t("like")}
+                >
+                  <Heart className={`h-5 w-5 ${liked ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : ""}`} />
+                  <span className="sr-only">{likeCount}</span>
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50/80 dark:bg-neutral-900/40 p-4">
@@ -297,7 +341,16 @@ export function ProductDetailMarketView({
                 {sellerKycVerified ? tDB("verifiedSeller") : t("sellerFeedback")}
               </p>
             </div>
-            {isBuyer && (
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={onSignInRequired}
+                className="text-sm font-semibold text-[var(--brand-red)] hover:underline flex items-center gap-1 shrink-0"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {t("signInToMessage")}
+              </button>
+            ) : isBuyer ? (
               <button
                 type="button"
                 onClick={onMessageSeller}
@@ -307,7 +360,7 @@ export function ProductDetailMarketView({
                 {startingChat ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                 {tChat("messageSeller")}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

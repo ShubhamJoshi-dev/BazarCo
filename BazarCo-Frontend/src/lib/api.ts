@@ -478,6 +478,8 @@ export interface ProductDetailResponse {
   userLiked: boolean;
   reviews: ProductReview[];
   sellerKycVerified?: boolean;
+  productVideoCount?: number;
+  primaryVideoId?: string | null;
 }
 
 export async function getProductById(id: string): Promise<ProductDetailResponse | null> {
@@ -491,6 +493,8 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
       userLiked: boolean;
       reviews: ProductReview[];
       sellerKycVerified?: boolean;
+      productVideoCount?: number;
+      primaryVideoId?: string | null;
     }>(`/products/${id}`);
     if (data.status === "success") {
       return {
@@ -501,6 +505,8 @@ export async function getProductById(id: string): Promise<ProductDetailResponse 
         userLiked: data.userLiked ?? false,
         reviews: data.reviews ?? [],
         sellerKycVerified: data.sellerKycVerified ?? false,
+        productVideoCount: data.productVideoCount ?? 0,
+        primaryVideoId: data.primaryVideoId ?? null,
       };
     }
     return null;
@@ -1788,5 +1794,70 @@ export async function recordVideoView(videoId: string): Promise<void> {
     await api.post(`/products/videos/${videoId}/view`);
   } catch {
     /* non-blocking */
+  }
+}
+
+export interface VideoCommentReply {
+  id: string;
+  userId: string;
+  userName: string;
+  parentId: string | null;
+  text: string;
+  createdAt: string;
+}
+
+export interface VideoComment {
+  id: string;
+  userId: string;
+  userName: string;
+  parentId: string | null;
+  text: string;
+  createdAt: string;
+  replies: VideoCommentReply[];
+}
+
+export async function listVideoComments(
+  videoId: string,
+): Promise<{ comments: VideoComment[]; total: number }> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      comments?: VideoComment[];
+      total?: number;
+    }>(`/products/videos/${videoId}/comments`);
+    if (data.status === "success") {
+      return { comments: data.comments ?? [], total: data.total ?? 0 };
+    }
+    return { comments: [], total: 0 };
+  } catch {
+    return { comments: [], total: 0 };
+  }
+}
+
+export async function addVideoComment(
+  videoId: string,
+  text: string,
+  parentId?: string,
+): Promise<{ success: boolean; total: number; comment?: VideoComment | VideoCommentReply }> {
+  try {
+    const { data } = await api.post<{
+      status: string;
+      message?: string;
+      total?: number;
+      comment?: VideoComment | VideoCommentReply;
+    }>(`/products/videos/${videoId}/comments`, {
+      text,
+      ...(parentId ? { parentId } : {}),
+    });
+    if (data.status === "success") {
+      return { success: true, total: data.total ?? 0, comment: data.comment };
+    }
+    return { success: false, total: 0 };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      return { success: false, total: 0, ...(body.message ? {} : {}) };
+    }
+    return { success: false, total: 0 };
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { Toast } from "@/components/Toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { ProductDetailMarketView } from "@/components/marketplace/ProductDetailMarketView";
+import { getLoginHref } from "@/lib/loginRedirect";
 
 /* ─── Avatar gradient ── */
 function Avatar({ name, size = 10, colors }: { name: string; size?: number; colors: [string, string] }) {
@@ -338,8 +339,10 @@ export default function ProductDetailPage() {
   const params  = useParams();
   const { formatPrice } = useCurrency();
   const router  = useRouter();
+  const pathname = usePathname();
   const id      = typeof params.id === "string" ? params.id : "";
   const { user } = useAuth();
+  const signInToContinue = () => router.push(getLoginHref(pathname ?? `/dashboard/product/${id}`));
   const t       = useTranslations("offers");
   const tChat   = useTranslations("chat");
   const tDB     = useTranslations("dashboard");
@@ -388,6 +391,7 @@ export default function ProductDetailPage() {
   }, [id, user?.id, data?.product?.sellerId]);
 
   const handleSubmitOffer = async () => {
+    if (!user) { signInToContinue(); return; }
     if (!id) return;
     const price = parseFloat(offerPrice);
     if (Number.isNaN(price) || price < 0) { setActionToast({ show: true, message: "Enter a valid price.", isError: true }); return; }
@@ -402,6 +406,7 @@ export default function ProductDetailPage() {
   };
 
   const handleMessageSeller = async () => {
+    if (!user) { signInToContinue(); return; }
     if (!id) return;
     setStartingChat(true);
     const result = await createConversationByProduct(id);
@@ -411,6 +416,7 @@ export default function ProductDetailPage() {
   };
 
   const handleLike = async () => {
+    if (!user) { signInToContinue(); return; }
     if (!id) return;
     const result = await toggleProductLike(id);
     if (result) { setLiked(result.liked); setLikeCount(result.likeCount); }
@@ -453,6 +459,7 @@ export default function ProductDetailPage() {
   };
 
   const handleAddToCart = async () => {
+    if (!user) { signInToContinue(); return; }
     if (!id || !data?.product) return;
     setAddingToCart(true);
     const result = await addToCart(id, cartQty);
@@ -461,6 +468,7 @@ export default function ProductDetailPage() {
   };
 
   const handleBuyNow = async () => {
+    if (!user) { signInToContinue(); return; }
     if (!id || !data?.product) return;
     setAddingToCart(true);
     const result = await addToCart(id, cartQty);
@@ -534,6 +542,7 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Write a review */}
+        {user ? (
         <div className="clay-card p-6 space-y-5">
           <h3 className="font-bold text-[var(--foreground)] flex items-center gap-2">
             <Star className="w-4 h-4 text-amber-400" /> Write a Review
@@ -582,6 +591,15 @@ export default function ProductDetailPage() {
             </motion.button>
           </div>
         </div>
+        ) : (
+          <div className="clay-card p-6 text-center space-y-3">
+            <p className="font-bold text-[var(--foreground)]">Sign in to write a review</p>
+            <p className="text-sm text-[var(--brand-muted)]">Browse freely — create an account to share your experience.</p>
+            <button type="button" onClick={signInToContinue} className="clay-btn-blue px-6 py-2.5 text-sm inline-flex">
+              Sign in
+            </button>
+          </div>
+        )}
 
         {/* Review list — social feed style */}
         {reviews.length === 0 ? (
@@ -631,6 +649,7 @@ export default function ProductDetailPage() {
         addingToCart={addingToCart}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+        onSignInRequired={signInToContinue}
         reviewsSection={reviewsBlock}
       />
     </>

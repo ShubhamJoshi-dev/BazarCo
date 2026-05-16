@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.middleware";
+import { optionalAuth, requireAuth } from "../middleware/auth.middleware";
 import { requireSeller } from "../middleware/seller.middleware";
 import { uploadSingleImage } from "../config/multer";
 import {
@@ -15,15 +15,20 @@ import {
 import { addOrUpdateReview, addReaction, uploadReviewImageHandler } from "../controllers/reviewController";
 import { toggleLike } from "../controllers/likeController";
 import { listVideoFeed, recordVideoView } from "../controllers/videoFeedController";
+import { listVideoComments, createVideoComment } from "../controllers/videoCommentController";
 
 export const productsRouter = Router();
 
+// Public catalogue (optional auth enriches likes/reactions when logged in)
+productsRouter.get("/browse", optionalAuth, browseProducts);
+productsRouter.get("/videos/feed", optionalAuth, listVideoFeed);
+productsRouter.post("/videos/:id/view", optionalAuth, recordVideoView);
+productsRouter.get("/videos/:videoId/comments", optionalAuth, listVideoComments);
+productsRouter.post("/videos/:videoId/comments", requireAuth, createVideoComment);
+productsRouter.get("/:id", optionalAuth, getProductById);
+
 productsRouter.use(requireAuth);
-productsRouter.get("/browse", browseProducts);
-productsRouter.get("/videos/feed", listVideoFeed);
-productsRouter.post("/videos/:id/view", recordVideoView);
 productsRouter.get("/", listProducts);
-productsRouter.get("/:id", getProductById);
 productsRouter.post("/:id/reviews/upload-image", (req, res, next) => {
   uploadSingleImage(req, res, (e) => {
     if (e) {

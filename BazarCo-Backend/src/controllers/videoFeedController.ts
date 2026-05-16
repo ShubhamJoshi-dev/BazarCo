@@ -52,10 +52,6 @@ function toFeedDto(doc: Record<string, unknown> & { _id: Types.ObjectId }) {
 }
 
 export async function listVideoFeed(req: ReqWithUser, res: Response): Promise<void> {
-  if (!req.user) {
-    errorResponse(res, 401, "Authentication required");
-    return;
-  }
   const productId = typeof req.query.productId === "string" ? req.query.productId : undefined;
   const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 30;
   const skip = typeof req.query.skip === "string" ? parseInt(req.query.skip, 10) : 0;
@@ -66,10 +62,6 @@ export async function listVideoFeed(req: ReqWithUser, res: Response): Promise<vo
 }
 
 export async function recordVideoView(req: ReqWithUser, res: Response): Promise<void> {
-  if (!req.user) {
-    errorResponse(res, 401, "Authentication required");
-    return;
-  }
   const id = req.params.id;
   if (!id) {
     errorResponse(res, 400, "Video id required");

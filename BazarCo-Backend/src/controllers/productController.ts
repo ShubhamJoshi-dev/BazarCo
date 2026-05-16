@@ -8,6 +8,7 @@ import * as reviewRepo from "../repositories/review.repository";
 import * as reactionRepo from "../repositories/reviewReaction.repository";
 import * as likeRepo from "../repositories/like.repository";
 import * as userRepo from "../repositories/user.repository";
+import * as sellerVideoRepo from "../repositories/sellerVideo.repository";
 import { uploadImage, isCloudinaryConfigured } from "../services/cloudinary.service";
 import { createShopifyProduct, isShopifyConfigured } from "../services/shopify.service";
 import {
@@ -385,10 +386,6 @@ function toBrowseProductDto(hit: {
 }
 
 export async function browseProducts(req: ReqWithUser, res: Response): Promise<void> {
-  if (!req.user) {
-    errorResponse(res, 401, "Authentication required");
-    return;
-  }
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const categoryId = typeof req.query.category === "string" ? req.query.category.trim() || undefined : undefined;
   const tagsParam = req.query.tags;
@@ -483,10 +480,7 @@ export async function browseProducts(req: ReqWithUser, res: Response): Promise<v
 }
 
 export async function getProductById(req: ReqWithUser, res: Response): Promise<void> {
-  if (!req.user) {
-    errorResponse(res, 401, "Authentication required");
-    return;
-  }
+  const userId = req.user?.id;
   const id = req.params.id;
   const product = await productRepo.findById(id);
   if (!product) {
@@ -516,7 +510,7 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
     reviewRepo.countByProduct(id),
     likeRepo.countByProduct(id),
     reviewRepo.getAverageRating(id),
-    likeRepo.isLikedByUser(id, req.user.id),
+    userId ? likeRepo.isLikedByUser(id, userId) : Promise.resolve(false),
     reviewRepo.findByProduct(id),
   ]);
 
@@ -524,7 +518,7 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
   const [repliesMap, reactionCounts, userReactions] = await Promise.all([
     reviewRepo.findRepliesByParentIds(rootIds),
     reactionRepo.getCountsForMany(rootIds),
-    reactionRepo.getUserReactionsForMany(rootIds, req.user.id),
+    userId ? reactionRepo.getUserReactionsForMany(rootIds, userId) : Promise.resolve(new Map()),
   ]);
 
   const allAuthorIds = new Set<string>();
@@ -560,7 +554,9 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
   }
   const [replyReactionCounts, replyUserReactions] = await Promise.all([
     replyIds.length ? reactionRepo.getCountsForMany(replyIds) : Promise.resolve(new Map()),
-    replyIds.length ? reactionRepo.getUserReactionsForMany(replyIds, req.user.id) : Promise.resolve(new Map()),
+    userId && replyIds.length
+      ? reactionRepo.getUserReactionsForMany(replyIds, userId)
+      : Promise.resolve(new Map()),
   ]);
 
   const reviewsWithUser = reviews.map((r) => {
@@ -605,6 +601,11 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
   const seller = await userRepo.findById(doc.sellerId.toString());
   const sellerKycVerified = (seller as { kycVerified?: boolean } | null)?.kycVerified ?? false;
 
+  const [productVideoCount, primaryVideoId] = await Promise.all([
+    sellerVideoRepo.countPublicVideosForProduct(id),
+    sellerVideoRepo.findFirstPublicVideoIdForProduct(id),
+  ]);
+
   successResponse(res, 200, "Product found", {
     product: productDto,
     reviewCount,
@@ -613,5 +614,7 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
     userLiked,
     reviews: reviewsWithUser,
     sellerKycVerified,
+    productVideoCount,
+    primaryVideoId,
   });
 }

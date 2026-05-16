@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { authLogin } from "@/lib/api";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { RedirectIfAuthed } from "@/components/auth/RedirectIfAuthed";
+import { getReturnUrlFromSearch } from "@/lib/loginRedirect";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = getReturnUrlFromSearch(searchParams.toString()) ?? "/dashboard";
   const { setUser } = useAuth();
   const t = useTranslations("auth");
   const [email, setEmail] = useState("");
@@ -35,7 +39,7 @@ export default function LoginPage() {
     setLoading(false);
     if (result.status === "success" && result.user) {
       setUser(result.user);
-      router.push("/dashboard");
+      router.push(returnUrl);
       router.refresh();
       return;
     }
@@ -43,7 +47,7 @@ export default function LoginPage() {
   }
 
   return (
-    <RedirectIfAuthed>
+    <RedirectIfAuthed redirectTo={returnUrl}>
       <AuthLayout title={t("signInTitle")} subtitle={t("signInSubtitle")}>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
@@ -110,5 +114,13 @@ export default function LoginPage() {
         </p>
       </AuthLayout>
     </RedirectIfAuthed>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

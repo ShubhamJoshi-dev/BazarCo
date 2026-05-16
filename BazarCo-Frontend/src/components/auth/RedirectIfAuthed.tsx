@@ -5,15 +5,22 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
+export function RedirectIfAuthed({
+  children,
+  redirectTo = "/dashboard",
+}: {
+  children: React.ReactNode;
+  /** Where to send users who are already signed in (e.g. after login returnUrl). */
+  redirectTo?: string;
+}) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/dashboard");
+      router.replace(redirectTo);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, redirectTo]);
 
   if (loading || user) {
     return (

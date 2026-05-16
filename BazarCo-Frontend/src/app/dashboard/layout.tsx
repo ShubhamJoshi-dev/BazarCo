@@ -7,7 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChatSocketProvider } from "@/contexts/ChatSocketContext";
 import { BuyerDashboardLayout } from "@/components/dashboard/BuyerDashboardLayout";
 import { SellerDashboardLayout } from "@/components/dashboard/SellerDashboardLayout";
+import { PublicMarketplaceLayout } from "@/components/marketplace/PublicMarketplaceLayout";
 import { BazarCoBot } from "@/components/BazarCoBot";
+import { isPublicMarketplacePath, isReelsPath } from "@/lib/marketplacePublic";
+import { getLoginHref } from "@/lib/loginRedirect";
 
 export default function DashboardLayout({
   children,
@@ -19,13 +22,15 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const t = useTranslations("dashboard");
 
+  const isPublicGuest = !user && isPublicMarketplacePath(pathname);
+  const guestReels = isPublicGuest && isReelsPath(pathname);
+
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
+    if (!user && !isPublicMarketplacePath(pathname)) {
+      router.replace(getLoginHref(pathname ?? "/dashboard"));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   if (loading) {
     return (
@@ -36,7 +41,9 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return null;
+    if (!isPublicGuest) return null;
+    if (guestReels) return <>{children}</>;
+    return <PublicMarketplaceLayout>{children}</PublicMarketplaceLayout>;
   }
 
   if (user.role === "seller") {
