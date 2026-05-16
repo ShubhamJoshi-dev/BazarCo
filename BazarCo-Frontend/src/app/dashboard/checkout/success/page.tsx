@@ -52,7 +52,7 @@ export default function CheckoutSuccessPage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-lg mx-auto rounded-2xl bg-white/[0.04] p-8 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+        className="max-w-lg mx-auto rounded-2xl bg-[var(--card-bg)] p-8 text-center shadow-sm"
       >
         <p className="text-[var(--brand-red)] font-medium mb-2">{t("errorGeneric")}</p>
         <p className="text-sm text-neutral-400 mb-6">{errorMessage}</p>
@@ -72,7 +72,7 @@ export default function CheckoutSuccessPage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-2xl mx-auto space-y-8"
     >
-      <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-8 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+      <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-8 text-center shadow-sm">
         <CheckCircle2 className="mx-auto w-16 h-16 text-emerald-500 mb-4" />
         <h1 className="text-2xl font-bold text-[var(--brand-white)] mb-2">{t("paymentSuccess")}</h1>
         <p className="text-neutral-400">
@@ -81,14 +81,14 @@ export default function CheckoutSuccessPage() {
       </div>
 
       {orders.length > 0 && (
-        <div className="rounded-2xl bg-white/[0.04] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+        <div className="rounded-2xl bg-[var(--card-bg)] p-6 shadow-sm">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--brand-white)] mb-4">
             <ShoppingBag className="w-5 h-5 text-[var(--brand-blue)]" />
             {t("yourOrders")}
           </h2>
           <ul className="space-y-4">
             {orders.map((order) => (
-              <li key={order.id} className="rounded-xl bg-white/[0.03] p-4">
+              <li key={order.id} className="rounded-xl bg-[var(--card-bg)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <span className="text-sm text-neutral-400">Order #{order.id.slice(-8)}</span>
                   <span className="font-semibold text-[var(--brand-white)]">${Number(order.total).toFixed(2)}</span>
@@ -129,7 +129,7 @@ export default function CheckoutSuccessPage() {
         </Link>
         <Link
           href="/dashboard/browse"
-          className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-5 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-white/5"
+          className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand-border)] px-5 py-2.5 text-sm font-medium text-[var(--brand-white)] hover:bg-[var(--input-bg)]"
         >
           {tCommon("continueShopping")}
         </Link>

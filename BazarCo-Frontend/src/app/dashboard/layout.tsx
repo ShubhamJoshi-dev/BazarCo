@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChatSocketProvider } from "@/contexts/ChatSocketContext";
@@ -16,6 +16,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const t = useTranslations("dashboard");
 
   useEffect(() => {
@@ -39,9 +40,10 @@ export default function DashboardLayout({
   }
 
   if (user.role === "seller") {
+    const isVideoWorkspace = pathname?.startsWith("/dashboard/videos");
     return (
       <ChatSocketProvider>
-        <SellerDashboardLayout>{children}</SellerDashboardLayout>
+        {isVideoWorkspace ? children : <SellerDashboardLayout>{children}</SellerDashboardLayout>}
       </ChatSocketProvider>
     );
   }

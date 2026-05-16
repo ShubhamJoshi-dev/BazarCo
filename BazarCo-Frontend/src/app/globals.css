@@ -1,97 +1,71 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-/* ─── Brand tokens — White Claymorphism (light = default) ─── */
+/* Match next-themes `class` strategy — avoid OS dark mode alone triggering `dark:` utilities */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Brand tokens — light workspace + red accent (Stitch-style) ─── */
 :root {
-  --background: #f0f4ff;
-  --foreground: #1a1625;
-  --brand-red: #e8334a;
-  --brand-blue: #1a7aff;
-  --brand-white: #1a1625;
-  --brand-black: #f0f4ff;
-  --brand-muted: #6b6480;
-  --brand-border: rgba(0, 0, 0, 0.08);
-  --gradient-red: #c62828;
+  --background: #f8f9fc;
+  --foreground: #0f172a;
+  --brand-red: #c62828;
+  --brand-blue: #1565c0;
+  /* Legacy names: "white" = ink, "black" = paper / elevated surface */
+  --brand-white: #0f172a;
+  --brand-black: #ffffff;
+  --brand-muted: #64748b;
+  --brand-border: rgba(15, 23, 42, 0.08);
+  --gradient-red: #b71c1c;
   --gradient-blue: #0d47a1;
   --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.06);
-  --dashboard-glow-red: rgba(232, 51, 74, 0.07);
-  --dashboard-glow-blue: rgba(26, 122, 255, 0.07);
+  --card-border: rgba(15, 23, 42, 0.06);
+  --input-bg: #f1f5f9;
+  --row-hover: rgba(15, 23, 42, 0.04);
+  --dashboard-glow-red: rgba(198, 40, 40, 0.04);
+  --dashboard-glow-blue: rgba(21, 101, 192, 0.04);
 
-  /* Clay shadow tokens — crisp on white */
-  --clay-shadow-red:
-    0 8px 32px -4px rgba(232, 51, 74, 0.22),
-    0 3px 10px rgba(232, 51, 74, 0.12),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1),
-    inset 0 -2px 0 rgba(232, 51, 74, 0.07);
-  --clay-shadow-blue:
-    0 8px 32px -4px rgba(26, 122, 255, 0.22),
-    0 3px 10px rgba(26, 122, 255, 0.12),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1),
-    inset 0 -2px 0 rgba(26, 122, 255, 0.07);
-  --clay-shadow-neutral:
-    0 8px 32px -4px rgba(0, 0, 0, 0.10),
-    0 3px 10px rgba(0, 0, 0, 0.06),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.04);
-  --clay-shadow-hover-red:
-    0 14px 44px -4px rgba(232, 51, 74, 0.32),
-    0 5px 16px rgba(232, 51, 74, 0.18),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1);
-  --clay-shadow-hover-blue:
-    0 14px 44px -4px rgba(26, 122, 255, 0.32),
-    0 5px 16px rgba(26, 122, 255, 0.18),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1);
-  --clay-shadow-hover-neutral:
-    0 14px 44px -4px rgba(0, 0, 0, 0.14),
-    0 5px 16px rgba(0, 0, 0, 0.08),
-    inset 0 1.5px 0 rgba(255, 255, 255, 1);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07);
+
+  /* Kept for compatibility — now flat, minimal depth */
+  --clay-shadow-red: var(--shadow-sm);
+  --clay-shadow-blue: var(--shadow-sm);
+  --clay-shadow-neutral: var(--shadow-sm);
+  --clay-shadow-hover-red: var(--shadow-md);
+  --clay-shadow-hover-blue: var(--shadow-md);
+  --clay-shadow-hover-neutral: var(--shadow-md);
 }
 
-/* ─── Dark theme override ─── */
+/* ─── Dark theme — slate surfaces, same red accent ─── */
 .dark {
-  --background: #0d0b14;
-  --foreground: #f0eeff;
-  --brand-red: #ff5c72;
-  --brand-blue: #4da6ff;
-  --brand-white: #f0eeff;
-  --brand-black: #0d0b14;
-  --brand-muted: #8b85a0;
-  --brand-border: rgba(255, 255, 255, 0.08);
-  --gradient-red: #c2185b;
-  --gradient-blue: #1565c0;
-  --card-bg: rgba(22, 18, 36, 0.92);
-  --card-border: rgba(255, 255, 255, 0.07);
-  --dashboard-glow-red: rgba(255, 92, 114, 0.12);
-  --dashboard-glow-blue: rgba(77, 166, 255, 0.12);
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --brand-red: #ef4444;
+  --brand-blue: #60a5fa;
+  --brand-white: #f8fafc;
+  --brand-black: #1e293b;
+  --brand-muted: #94a3b8;
+  --brand-border: rgba(248, 250, 252, 0.08);
+  --gradient-red: #991b1b;
+  --gradient-blue: #1e40af;
+  --card-bg: #1e293b;
+  --card-border: rgba(248, 250, 252, 0.06);
+  --input-bg: rgba(248, 250, 252, 0.06);
+  --row-hover: rgba(248, 250, 252, 0.06);
+  --dashboard-glow-red: rgba(239, 68, 68, 0.08);
+  --dashboard-glow-blue: rgba(96, 165, 250, 0.08);
 
-  --clay-shadow-red:
-    0 10px 40px -6px rgba(255, 92, 114, 0.35),
-    0 4px 12px rgba(255, 92, 114, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-  --clay-shadow-blue:
-    0 10px 40px -6px rgba(77, 166, 255, 0.35),
-    0 4px 12px rgba(77, 166, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-  --clay-shadow-neutral:
-    0 10px 40px -6px rgba(0, 0, 0, 0.55),
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.35);
-  --clay-shadow-hover-red:
-    0 16px 48px -6px rgba(255, 92, 114, 0.45),
-    0 6px 18px rgba(255, 92, 114, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  --clay-shadow-hover-blue:
-    0 16px 48px -6px rgba(77, 166, 255, 0.45),
-    0 6px 18px rgba(77, 166, 255, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  --clay-shadow-hover-neutral:
-    0 16px 48px -6px rgba(0, 0, 0, 0.65),
-    0 6px 18px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+
+  --clay-shadow-red: var(--shadow-sm);
+  --clay-shadow-blue: var(--shadow-sm);
+  --clay-shadow-neutral: var(--shadow-sm);
+  --clay-shadow-hover-red: var(--shadow-md);
+  --clay-shadow-hover-blue: var(--shadow-md);
+  --clay-shadow-hover-neutral: var(--shadow-md);
 }
 
 @theme inline {
@@ -101,7 +75,7 @@
   --color-brand-blue: var(--brand-blue);
   --color-brand-white: var(--brand-white);
   --color-brand-black: var(--brand-black);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -113,88 +87,84 @@ body {
   transition: background 0.35s ease, color 0.35s ease;
 }
 
-/* ─── Claymorphism cards ─── */
+/* ─── Claymorphism cards (class names kept — flat Stitch-style) ─── */
 .clay-card {
   background: var(--card-bg);
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid var(--card-border);
-  box-shadow: var(--clay-shadow-neutral);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .clay-card:hover {
-  box-shadow: var(--clay-shadow-hover-neutral);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+.dark .clay-card:hover {
+  border-color: rgba(248, 250, 252, 0.12);
 }
 
 .clay-card-red {
   background: var(--card-bg);
-  border-radius: 24px;
-  border: 1px solid rgba(232, 51, 74, 0.14);
-  box-shadow: var(--clay-shadow-red);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  border-radius: 12px;
+  border: 1px solid rgba(198, 40, 40, 0.12);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 :root .clay-card-red {
-  background: rgba(255, 248, 249, 0.98);
+  background: #fff5f5;
 }
 .dark .clay-card-red {
-  background: rgba(22, 18, 36, 0.92);
-  border-color: rgba(255, 92, 114, 0.18);
+  background: var(--card-bg);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 .clay-card-red:hover {
-  box-shadow: var(--clay-shadow-hover-red);
+  box-shadow: var(--shadow-md);
 }
 
 .clay-card-blue {
   background: var(--card-bg);
-  border-radius: 24px;
-  border: 1px solid rgba(26, 122, 255, 0.14);
-  box-shadow: var(--clay-shadow-blue);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  border-radius: 12px;
+  border: 1px solid rgba(21, 101, 192, 0.12);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 :root .clay-card-blue {
-  background: rgba(245, 249, 255, 0.98);
+  background: #f0f7ff;
 }
 .dark .clay-card-blue {
-  background: rgba(22, 18, 36, 0.92);
-  border-color: rgba(77, 166, 255, 0.18);
+  background: var(--card-bg);
+  border-color: rgba(96, 165, 250, 0.2);
 }
 .clay-card-blue:hover {
-  box-shadow: var(--clay-shadow-hover-blue);
+  box-shadow: var(--shadow-md);
 }
 
-/* ─── Claymorphism buttons ─── */
+/* ─── Primary buttons ─── */
 .clay-btn-red {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: 10px;
   background: var(--brand-red);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   border: none;
-  box-shadow:
-    0 5px 0 rgba(180, 20, 40, 0.45),
-    0 8px 24px rgba(232, 51, 74, 0.35);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   cursor: pointer;
   letter-spacing: 0.01em;
 }
 .clay-btn-red:hover {
-  transform: translateY(-2px);
-  background: #d42840;
-  box-shadow:
-    0 7px 0 rgba(180, 20, 40, 0.45),
-    0 14px 32px rgba(232, 51, 74, 0.45);
+  transform: translateY(-1px);
+  background: #b71c1c;
+  box-shadow: var(--shadow-sm);
 }
 .clay-btn-red:active {
-  transform: translateY(3px);
-  box-shadow:
-    0 2px 0 rgba(180, 20, 40, 0.4),
-    0 4px 12px rgba(232, 51, 74, 0.25);
+  transform: translateY(0);
 }
 .clay-btn-red:disabled {
   opacity: 0.55;
   transform: none;
-  box-shadow: 0 3px 0 rgba(180, 20, 40, 0.3), 0 4px 14px rgba(232, 51, 74, 0.2);
   cursor: not-allowed;
 }
 
@@ -202,30 +172,23 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: 10px;
   background: var(--brand-blue);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   border: none;
-  box-shadow:
-    0 5px 0 rgba(10, 60, 180, 0.4),
-    0 8px 24px rgba(26, 122, 255, 0.35);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+  box-shadow: var(--shadow-xs);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   cursor: pointer;
   letter-spacing: 0.01em;
 }
 .clay-btn-blue:hover {
-  transform: translateY(-2px);
-  background: #0f6ae0;
-  box-shadow:
-    0 7px 0 rgba(10, 60, 180, 0.4),
-    0 14px 32px rgba(26, 122, 255, 0.45);
+  transform: translateY(-1px);
+  background: #0d47a1;
+  box-shadow: var(--shadow-sm);
 }
 .clay-btn-blue:active {
-  transform: translateY(3px);
-  box-shadow:
-    0 2px 0 rgba(10, 60, 180, 0.35),
-    0 4px 12px rgba(26, 122, 255, 0.25);
+  transform: translateY(0);
 }
 .clay-btn-blue:disabled {
   opacity: 0.55;
@@ -233,168 +196,215 @@ body {
   cursor: not-allowed;
 }
 
-/* ─── Claymorphism inputs ─── */
+/* ─── Inputs ─── */
 .clay-input {
-  border-radius: 16px;
-  border: 1.5px solid var(--brand-border);
+  border-radius: 10px;
+  border: 1px solid var(--brand-border);
   background: var(--card-bg);
   color: var(--foreground);
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.07),
-    0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .dark .clay-input {
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.22),
-    0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--input-bg);
 }
 .clay-input:focus {
   outline: none;
   border-color: var(--brand-blue);
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.06),
-    0 0 0 3px rgba(26, 122, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12);
 }
 .dark .clay-input:focus {
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.22),
-    0 0 0 3px rgba(77, 166, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
-/* ─── Claymorphism nav pills ─── */
+/* ─── Header nav pills ─── */
 .clay-nav-pill {
   border-radius: 9999px;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   font-weight: 500;
-  transition: all 0.18s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .clay-nav-pill.active-red {
-  background: rgba(232, 51, 74, 0.1);
-  border-color: rgba(232, 51, 74, 0.35);
+  background: rgba(198, 40, 40, 0.08);
+  border-color: rgba(198, 40, 40, 0.2);
   color: var(--brand-red);
-  box-shadow:
-    0 3px 10px rgba(232, 51, 74, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .clay-nav-pill.active-blue {
-  background: rgba(26, 122, 255, 0.1);
-  border-color: rgba(26, 122, 255, 0.35);
+  background: rgba(21, 101, 192, 0.08);
+  border-color: rgba(21, 101, 192, 0.2);
   color: var(--brand-blue);
-  box-shadow:
-    0 3px 10px rgba(26, 122, 255, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .dark .clay-nav-pill.active-red {
-  background: rgba(255, 92, 114, 0.15);
-  border-color: rgba(255, 92, 114, 0.4);
-  box-shadow:
-    0 4px 12px rgba(255, 92, 114, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 .dark .clay-nav-pill.active-blue {
-  background: rgba(77, 166, 255, 0.15);
-  border-color: rgba(77, 166, 255, 0.4);
-  box-shadow:
-    0 4px 12px rgba(77, 166, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.25);
 }
 .clay-nav-pill:not(.active-red):not(.active-blue) {
   color: var(--brand-muted);
 }
 .clay-nav-pill:not(.active-red):not(.active-blue):hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--row-hover);
   color: var(--foreground);
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-color: var(--brand-border);
 }
 .dark .clay-nav-pill:not(.active-red):not(.active-blue):hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--row-hover);
+  border-color: var(--brand-border);
 }
 
-/* ─── Claymorphism sidebar links ─── */
+/* ─── Sidebar links — red rail + type when active ─── */
 .clay-sidebar-link {
-  border-radius: 14px;
-  border: 1.5px solid transparent;
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid transparent;
   font-weight: 500;
-  transition: all 0.18s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .clay-sidebar-link.active {
-  background: rgba(232, 51, 74, 0.09);
-  border-color: rgba(232, 51, 74, 0.28);
+  background: rgba(198, 40, 40, 0.06);
+  border-color: transparent;
   color: var(--brand-red);
-  box-shadow:
-    0 3px 12px rgba(232, 51, 74, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: none;
+}
+.clay-sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 9999px;
+  background: var(--brand-red);
 }
 .dark .clay-sidebar-link.active {
-  background: rgba(255, 92, 114, 0.14);
-  border-color: rgba(255, 92, 114, 0.35);
-  box-shadow:
-    0 4px 14px rgba(255, 92, 114, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(239, 68, 68, 0.1);
 }
 .clay-sidebar-link:not(.active):hover {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.08);
+  background: var(--row-hover);
+  color: var(--foreground);
+}
+
+.buyer-sidebar-link {
+  position: relative;
+  font-weight: 500;
+  color: var(--brand-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.buyer-sidebar-link.active {
+  background: rgba(198, 40, 40, 0.08);
+  color: var(--brand-red);
+}
+.buyer-sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 9999px;
+  background: var(--brand-red);
+}
+.buyer-sidebar-link:not(.active):hover {
+  background: var(--row-hover);
   color: var(--foreground);
 }
 .dark .clay-sidebar-link:not(.active):hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--row-hover);
 }
 
-/* ─── Clay badge ─── */
+/* ─── Status badges ─── */
 .clay-badge-red {
   border-radius: 9999px;
-  background: rgba(232, 51, 74, 0.1);
-  border: 1px solid rgba(232, 51, 74, 0.28);
+  background: rgba(198, 40, 40, 0.1);
+  border: 1px solid rgba(198, 40, 40, 0.22);
   color: var(--brand-red);
-  box-shadow: 0 2px 5px rgba(232, 51, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.125rem 0.625rem;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 0.3125rem 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
 }
 .dark .clay-badge-red {
-  background: rgba(255, 92, 114, 0.15);
-  border-color: rgba(255, 92, 114, 0.35);
-  box-shadow: 0 2px 6px rgba(255, 92, 114, 0.15);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
 }
 .clay-badge-blue {
   border-radius: 9999px;
-  background: rgba(26, 122, 255, 0.1);
-  border: 1px solid rgba(26, 122, 255, 0.28);
+  background: rgba(21, 101, 192, 0.08);
+  border: 1px solid rgba(21, 101, 192, 0.2);
   color: var(--brand-blue);
-  box-shadow: 0 2px 5px rgba(26, 122, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.125rem 0.625rem;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 0.3125rem 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
 }
 .dark .clay-badge-blue {
-  background: rgba(77, 166, 255, 0.15);
-  border-color: rgba(77, 166, 255, 0.35);
-  box-shadow: 0 2px 6px rgba(77, 166, 255, 0.15);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.28);
 }
 
-/* ─── Dashboard background ─── */
+/* Category / tag overlays on product imagery — full glyph box, no clipping */
+.browse-pill-category {
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 3rem);
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: var(--brand-blue);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(21, 101, 192, 0.18);
+  box-shadow: var(--shadow-xs);
+}
+.dark .browse-pill-category {
+  color: #dbeafe;
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow: var(--shadow-sm);
+}
+.browse-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: capitalize;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+.dark .browse-pill-tag {
+  background: rgba(0, 0, 0, 0.78);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ─── Dashboard canvas ─── */
 .dashboard-bg {
-  background:
-    radial-gradient(ellipse 60% 40% at 8% 0%, var(--dashboard-glow-red) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 92% 100%, var(--dashboard-glow-blue) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 25% at 50% 50%, rgba(26, 122, 255, 0.03) 0%, transparent 70%),
-    var(--background);
+  background: var(--background);
 }
 
 /* ─── Hero / auth background ─── */
 .hero-gradient {
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, var(--gradient-red) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 60% at 80% 70%, var(--gradient-blue) 0%, transparent 55%),
-    var(--brand-black);
-  animation: gradient-shift 10s ease-in-out infinite;
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(198, 40, 40, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 80% 100%, rgba(21, 101, 192, 0.06) 0%, transparent 55%),
+    var(--background);
 }
 
 .hero-card {
@@ -404,28 +414,26 @@ body {
   box-shadow: none;
 }
 
-/* ─── Clay hero background (light-mode coming-soon) ─── */
+/* ─── Auth / marketing hero ─── */
 .clay-hero-bg {
   background:
-    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(26, 122, 255, 0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 65% 45% at 85% 80%, rgba(232, 51, 74, 0.09) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 35% at 50% 55%, rgba(26, 122, 255, 0.04) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 45% at 12% 18%, rgba(198, 40, 40, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 42% at 88% 82%, rgba(21, 101, 192, 0.05) 0%, transparent 55%),
     var(--background);
 }
 .dark .clay-hero-bg {
   background:
-    radial-gradient(ellipse 75% 55% at 15% 20%, rgba(21, 64, 168, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 85% 80%, rgba(192, 32, 28, 0.32) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(21, 64, 168, 0.08) 0%, transparent 70%),
-    #0d0b14;
+    radial-gradient(ellipse 70% 45% at 12% 18%, rgba(239, 68, 68, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 42% at 88% 82%, rgba(96, 165, 250, 0.08) 0%, transparent 55%),
+    var(--background);
 }
 
-/* ─── Settings card ─── */
+/* ─── Settings / panel card shell ─── */
 .settings-card {
   background: var(--card-bg);
-  border: 1px solid rgba(232, 51, 74, 0.10);
-  border-radius: 24px;
-  box-shadow: var(--clay-shadow-neutral);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ─── Animations ─── */
@@ -485,43 +493,11 @@ body {
   50% { transform: scale(1.15); opacity: 1; }
 }
 
-@keyframes card-glow {
-  0%, 100% {
-    box-shadow:
-      0 8px 32px -4px rgba(232, 51, 74, 0.14),
-      0 3px 10px rgba(26, 122, 255, 0.08),
-      inset 0 1.5px 0 rgba(255, 255, 255, 1);
-  }
-  50% {
-    box-shadow:
-      0 12px 40px -4px rgba(232, 51, 74, 0.22),
-      0 5px 16px rgba(26, 122, 255, 0.14),
-      inset 0 1.5px 0 rgba(255, 255, 255, 1);
-  }
-}
-
-.dark .card-glow,
-.dark .card-glow:is(.card-glow) {
-  animation: card-glow-dark 4s ease-in-out infinite;
-}
-
-@keyframes card-glow-dark {
-  0%, 100% {
-    box-shadow:
-      0 10px 40px -6px rgba(255, 92, 114, 0.20),
-      0 4px 12px rgba(77, 166, 255, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-  50% {
-    box-shadow:
-      0 14px 48px -6px rgba(255, 92, 114, 0.30),
-      0 6px 18px rgba(77, 166, 255, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  }
-}
-
 .card-glow {
-  animation: card-glow 4s ease-in-out infinite;
+  animation: none;
+}
+.dark .card-glow {
+  animation: none;
 }
 
 @keyframes blob-drift {

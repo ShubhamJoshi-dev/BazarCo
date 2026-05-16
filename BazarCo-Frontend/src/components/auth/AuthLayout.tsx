@@ -14,17 +14,18 @@ export function AuthLayout({
   subtitle?: string;
 }) {
   return (
-    <div className="clay-hero-bg min-h-screen flex flex-col relative overflow-hidden">
-      {/* Floating clay blobs */}
-      <div className="absolute top-[-10%] right-[-8%] w-80 h-80 rounded-full blur-3xl pointer-events-none"
-        style={{ background: "var(--dashboard-glow-blue)" }} />
-      <div className="absolute bottom-[-8%] left-[-6%] w-72 h-72 rounded-full blur-3xl pointer-events-none"
-        style={{ background: "var(--dashboard-glow-red)" }} />
-      <div className="absolute top-[40%] left-[30%] w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-50"
-        style={{ background: "var(--dashboard-glow-blue)" }} />
+    <div className="clay-hero-bg relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        className="pointer-events-none absolute -right-[8%] -top-[10%] h-80 w-80 rounded-full blur-3xl"
+        style={{ background: "rgba(21, 101, 192, 0.06)" }}
+      />
+      <div
+        className="pointer-events-none absolute -bottom-[8%] -left-[6%] h-72 w-72 rounded-full blur-3xl"
+        style={{ background: "rgba(198, 40, 40, 0.05)" }}
+      />
 
-      <header className="relative z-10 flex justify-center pt-10 pb-6">
-        <Link href="/" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] rounded-2xl">
+      <header className="relative z-10 flex justify-center pb-6 pt-10">
+        <Link href="/" className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-red)]">
           <Image
             src="/logo.png"
             alt="BazarCo"
@@ -46,7 +47,7 @@ export function AuthLayout({
           {/* Top accent bar */}
           <div className="h-1 w-16 rounded-full mx-auto mb-6 bg-gradient-to-r from-[var(--brand-red)] to-[var(--brand-blue)]" />
 
-          <h1 className="text-2xl font-bold text-[var(--brand-white)] text-center mb-1">
+          <h1 className="mb-1 text-center text-2xl font-bold text-[var(--foreground)]">
             {title}
           </h1>
           {subtitle && (
@@ -59,9 +60,9 @@ export function AuthLayout({
       </main>
 
       <footer className="relative z-10 py-6 flex flex-col items-center gap-2">
-        <div className="clay-card px-4 py-2.5 flex items-center gap-2">
-          <span className="inline-flex w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/50 items-center justify-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <div className="clay-card flex items-center gap-2 px-4 py-2.5">
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
           </span>
           <p className="text-xs text-[var(--brand-muted)]">Verified and secure marketplace</p>
         </div>

@@ -158,8 +158,8 @@ export function AddressMapPicker({
   );
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-lg ${className}`}>
-      <div className="p-3 sm:p-4 border-b border-white/10 bg-white/[0.02]">
+    <div className={`overflow-hidden rounded-2xl border border-[var(--brand-border)] bg-[var(--card-bg)] shadow-lg ${className}`}>
+      <div className="p-3 sm:p-4 border-b border-[var(--brand-border)] bg-[var(--card-bg)]">
         <label className="block text-sm font-medium text-[var(--brand-white)] mb-2">{searchLabel ?? "Search location"}</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -174,11 +174,11 @@ export function AddressMapPicker({
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               onBlur={() => setTimeout(() => setShowResults(false), 180)}
               placeholder={searchPlaceholder ?? "Address, city, or place name"}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.06] pl-10 pr-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/30"
+              className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--input-bg)] pl-10 pr-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/30"
             />
             {showResults && searchResults.length > 0 && (
               <ul
-                className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-white/10 bg-[var(--brand-black)] py-1 shadow-xl z-[1100] max-h-48 overflow-auto"
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-[var(--brand-border)] bg-[var(--brand-black)] py-1 shadow-xl z-[1100] max-h-48 overflow-auto"
                 onMouseDown={(e) => e.preventDefault()}
               >
                 {searchResults.map((r, i) => (
@@ -186,7 +186,7 @@ export function AddressMapPicker({
                     <button
                       type="button"
                       onClick={() => pickSearchResult(r)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-[var(--brand-white)] hover:bg-white/10 truncate"
+                      className="w-full text-left px-4 py-2.5 text-sm text-[var(--brand-white)] hover:bg-[var(--input-bg)] truncate"
                     >
                       {r.display_name}
                     </button>
@@ -230,14 +230,14 @@ export function AddressMapPicker({
 
         {loading && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[1000] rounded-b-2xl">
-            <div className="flex flex-col items-center gap-3 rounded-xl bg-[var(--brand-black)]/90 px-6 py-4 border border-white/10">
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-[var(--brand-black)]/90 px-6 py-4 border border-[var(--brand-border)]">
               <Loader2 className="w-8 h-8 text-[var(--brand-blue)] animate-spin" />
               <span className="text-sm font-medium text-white">Getting address…</span>
             </div>
           </div>
         )}
 
-        <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl bg-black/75 backdrop-blur-sm px-4 py-3 text-xs text-white/95 border border-white/10">
+        <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl bg-black/75 backdrop-blur-sm px-4 py-3 text-xs text-white/95 border border-[var(--brand-border)]">
           {hint ?? "Search above or click on the map to set your delivery location. Address will be filled automatically."}
         </div>
       </div>

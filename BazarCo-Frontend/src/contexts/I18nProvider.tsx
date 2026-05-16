@@ -3,8 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { defaultLocale, type Locale } from "@/i18n/config";
+import messagesEn from "@/i18n/messages/en-AU.json";
+import messagesNe from "@/i18n/messages/ne.json";
 
 const LOCALE_STORAGE_KEY = "bazarco-locale";
+const TIME_ZONE = "Asia/Kathmandu";
+
+const MESSAGES: Record<Locale, Record<string, unknown>> = {
+  "en-AU": messagesEn as Record<string, unknown>,
+  ne: messagesNe as Record<string, unknown>,
+};
 
 function getStoredLocale(): Locale {
   if (typeof window === "undefined") return defaultLocale;
@@ -25,14 +33,6 @@ export function useLocale() {
   return ctx ?? { locale: defaultLocale, setLocale: () => {} };
 }
 
-const messagesEn = require("@/i18n/messages/en-AU.json");
-const messagesNe = require("@/i18n/messages/ne.json");
-
-const messageMap: Record<Locale, Record<string, unknown>> = {
-  "en-AU": messagesEn,
-  ne: messagesNe,
-};
-
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
   const [mounted, setMounted] = useState(false);
@@ -51,14 +51,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const messages = messageMap[locale];
+  const activeLocale = mounted ? locale : defaultLocale;
+  const messages = MESSAGES[activeLocale] ?? MESSAGES[defaultLocale];
 
   return (
-    <LocaleContext.Provider value={{ locale, setLocale }}>
-      <NextIntlClientProvider
-        locale={mounted ? locale : defaultLocale}
-        messages={mounted ? messages : messagesEn}
-      >
+    <LocaleContext.Provider value={{ locale: activeLocale, setLocale }}>
+      <NextIntlClientProvider locale={activeLocale} messages={messages} timeZone={TIME_ZONE}>
         {children}
       </NextIntlClientProvider>
     </LocaleContext.Provider>

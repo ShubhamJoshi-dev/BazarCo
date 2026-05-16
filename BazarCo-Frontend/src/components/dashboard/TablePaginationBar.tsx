@@ -32,20 +32,20 @@ export function TablePaginationBar({
   const to = Math.min(safePage * pageSize, total);
 
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-white/10 mt-4">
-      <p className="text-xs text-neutral-500">
-        Showing <span className="text-neutral-300 font-medium">{from}</span>–
-        <span className="text-neutral-300 font-medium">{to}</span> of{" "}
-        <span className="text-neutral-300 font-medium">{total}</span>
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-[var(--brand-border)] mt-4">
+      <p className="text-xs text-[var(--brand-muted)]">
+        Showing <span className="font-medium text-[var(--foreground)]">{from}</span>–
+        <span className="font-medium text-[var(--foreground)]">{to}</span> of{" "}
+        <span className="font-medium text-[var(--foreground)]">{total}</span>
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {showSizeSelector && (
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-[var(--brand-muted)]">
             <span className="shrink-0">Rows per page</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-sm text-[var(--brand-white)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/40"
+              className="rounded-lg border border-[var(--brand-border)] bg-[var(--input-bg)] px-2.5 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/40"
             >
               {sizeOptions.map((n) => (
                 <option key={n} value={n}>
@@ -61,11 +61,11 @@ export function TablePaginationBar({
             aria-label="Previous page"
             disabled={safePage <= 1}
             onClick={() => onPageChange(safePage - 1)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] text-[var(--foreground)] hover:bg-[var(--input-bg)] disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="min-w-[5.5rem] text-center text-xs text-neutral-400 tabular-nums px-1">
+          <span className="min-w-[5.5rem] px-1 text-center text-xs tabular-nums text-[var(--brand-muted)]">
             Page {safePage} / {totalPages}
           </span>
           <button
@@ -73,7 +73,7 @@ export function TablePaginationBar({
             aria-label="Next page"
             disabled={safePage >= totalPages}
             onClick={() => onPageChange(safePage + 1)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] text-[var(--foreground)] hover:bg-[var(--input-bg)] disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

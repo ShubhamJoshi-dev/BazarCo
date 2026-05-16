@@ -342,6 +342,9 @@ export async function productCreate(payload: {
   name: string;
   description?: string;
   price: number;
+  sku?: string;
+  stock?: number;
+  brand?: string;
   categoryId?: string;
   tagIds?: string[];
   image?: File;
@@ -351,6 +354,9 @@ export async function productCreate(payload: {
     form.append("name", payload.name.trim());
     form.append("description", (payload.description ?? "").trim());
     form.append("price", String(payload.price));
+    if (payload.sku) form.append("sku", payload.sku.trim());
+    if (payload.stock !== undefined) form.append("stock", String(payload.stock));
+    if (payload.brand) form.append("brand", payload.brand.trim());
     if (payload.categoryId) form.append("categoryId", payload.categoryId);
     (payload.tagIds ?? []).forEach((id) => form.append("tagIds", id));
     if (payload.image) form.append("image", payload.image);
@@ -364,13 +370,26 @@ export async function productCreate(payload: {
 
 export async function productUpdate(
   id: string,
-  payload: { name?: string; description?: string; price?: number; categoryId?: string | null; tagIds?: string[]; image?: File }
+  payload: {
+    name?: string;
+    description?: string;
+    price?: number;
+    sku?: string;
+    stock?: number;
+    brand?: string;
+    categoryId?: string | null;
+    tagIds?: string[];
+    image?: File;
+  },
 ): Promise<Product | null> {
   try {
     const form = new FormData();
     if (payload.name !== undefined) form.append("name", payload.name.trim());
     if (payload.description !== undefined) form.append("description", (payload.description ?? "").trim());
     if (payload.price !== undefined) form.append("price", String(payload.price));
+    if (payload.sku !== undefined) form.append("sku", payload.sku.trim());
+    if (payload.stock !== undefined) form.append("stock", String(payload.stock));
+    if (payload.brand !== undefined) form.append("brand", payload.brand.trim());
     if (payload.categoryId !== undefined) form.append("categoryId", payload.categoryId ?? "");
     if (payload.tagIds !== undefined) payload.tagIds.forEach((id) => form.append("tagIds", id));
     if (payload.image) form.append("image", payload.image);
@@ -654,7 +673,11 @@ export interface OrderRider {
 
 export interface Order {
   id: string;
+  orderNumber?: string;
   buyerId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerLocation?: string;
   sellerId: string;
   items: OrderItem[];
   total: number;
@@ -944,15 +967,22 @@ export interface KycDocument {
 export interface KycStatusResponse {
   kycVerified: boolean;
   status: "pending" | "verified" | "rejected";
+  rejectionReason?: string;
   documents: KycDocument[];
 }
 
 export async function getKycStatus(): Promise<KycStatusResponse | null> {
   try {
-    const { data } = await api.get<{ kycVerified?: boolean; status: KycStatusResponse["status"]; documents?: KycDocument[] }>("/kyc/status");
+    const { data } = await api.get<{
+      kycVerified?: boolean;
+      status: KycStatusResponse["status"];
+      rejectionReason?: string;
+      documents?: KycDocument[];
+    }>("/kyc/status");
     return {
       kycVerified: data.kycVerified ?? false,
       status: data.status ?? "pending",
+      rejectionReason: data.rejectionReason,
       documents: data.documents ?? [],
     };
   } catch {
@@ -1028,6 +1058,337 @@ export interface SellerReport {
   soldCount: number;
   ordersCompleted: SellerReportOrder[];
   ordersInProgress: SellerReportOrder[];
+}
+
+export interface SellerDashboardMetrics {
+  totalRevenue: number;
+  revenueChangePercent: number;
+  revenueTarget: number;
+  revenueTargetPercent: number;
+  activeOrders: number;
+  pendingDispatch: number;
+  outOfStock: number;
+}
+
+export interface SellerDashboardSalesDay {
+  day: string;
+  label: string;
+  amount: number;
+}
+
+export interface SellerDashboardOrderRow {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  productName: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface SellerDashboardAlert {
+  id: string;
+  type: "low_stock" | "return" | "dispatch" | "kyc";
+  title: string;
+  description: string;
+  severity: "urgent" | "warning" | "info";
+}
+
+export interface SellerDashboard {
+  metrics: SellerDashboardMetrics;
+  salesByDay: SellerDashboardSalesDay[];
+  recentOrders: SellerDashboardOrderRow[];
+  alerts: SellerDashboardAlert[];
+}
+
+export interface SellerAnalyticsKpi {
+  value: number;
+  changePercent: number;
+}
+
+export interface SellerAnalytics {
+  shopId: string;
+  salesTrend: { date: string; label: string; sales: number }[];
+  trafficSources: {
+    id: string;
+    name: string;
+    percent: number;
+    count: number;
+    color: string;
+  }[];
+  topRegions: { region: string; orders: number; growth: number; revenue: number }[];
+  regionHotspots: { region: string; x: number; y: number; intensity: number }[];
+  kpis: {
+    totalSales: SellerAnalyticsKpi;
+    conversionRate: SellerAnalyticsKpi;
+    avgOrderValue: SellerAnalyticsKpi;
+    activeVisitors: SellerAnalyticsKpi;
+  };
+}
+
+export async function sellerAnalytics(days = 30): Promise<SellerAnalytics | null> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      analytics?: SellerAnalytics;
+    }>("/seller/analytics", { params: { days } });
+    if (data.status === "success" && data.analytics) return data.analytics;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerDashboard(days = 30): Promise<SellerDashboard | null> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      dashboard?: SellerDashboard;
+    }>("/seller/dashboard", { params: { days } });
+    if (data.status === "success" && data.dashboard) return data.dashboard;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export interface SellerProfileBadge {
+  id: string;
+  label: string;
+  tone: "green" | "blue" | "amber" | "violet";
+}
+
+export interface SellerProfile {
+  id: string;
+  email: string;
+  name?: string;
+  shopTagline: string;
+  shopDisplayName: string;
+  shopLogoUrl: string;
+  businessName: string;
+  panVat: string;
+  businessAddress: string;
+  phone: string;
+  locationLabel: string;
+  kycVerified: boolean;
+  shopActive: boolean;
+  memberSinceYear: number;
+  rating: number;
+  ratingCount: number;
+  ratingDistribution: { stars: number; percent: number }[];
+  badges: SellerProfileBadge[];
+  performance: {
+    orderFulfillment: number;
+    responseRate: number;
+    productQuality: number;
+  };
+}
+
+export type SellerProfileUpdate = Partial<{
+  name: string;
+  shopTagline: string;
+  shopDisplayName: string;
+  businessName: string;
+  panVat: string;
+  businessAddress: string;
+  phone: string;
+  locationLabel: string;
+}>;
+
+export async function sellerProfileGet(): Promise<SellerProfile | null> {
+  try {
+    const { data } = await api.get<{ status: string; profile?: SellerProfile }>("/seller/profile");
+    if (data.status === "success" && data.profile) return data.profile;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerProfileUpdate(
+  payload: SellerProfileUpdate,
+): Promise<SellerProfile | null> {
+  try {
+    const { data } = await api.patch<{ status: string; profile?: SellerProfile }>(
+      "/seller/profile",
+      payload,
+    );
+    if (data.status === "success" && data.profile) return data.profile;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerProfileDeactivate(): Promise<boolean> {
+  try {
+    const { data } = await api.post<{ status: string }>("/seller/profile/deactivate");
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+export interface SellerSettings {
+  email: string;
+  shopDisplayName: string;
+  phone: string;
+  shopLogoUrl: string;
+  notifications: {
+    orderUpdates: boolean;
+    inventoryAlerts: boolean;
+    marketingInsights: boolean;
+  };
+  shipping: {
+    standardHub: boolean;
+    doorstep: boolean;
+  };
+}
+
+export type SellerSettingsUpdate = Partial<{
+  shopDisplayName: string;
+  phone: string;
+  shopLogoUrl: string;
+  notifyOrderUpdates: boolean;
+  notifyInventoryAlerts: boolean;
+  notifyMarketing: boolean;
+  shippingStandardHub: boolean;
+  shippingDoorstep: boolean;
+}>;
+
+export async function sellerSettingsGet(): Promise<SellerSettings | null> {
+  try {
+    const { data } = await api.get<{ status: string; settings?: SellerSettings }>("/seller/settings");
+    if (data.status === "success" && data.settings) return data.settings;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerSettingsUpdate(payload: SellerSettingsUpdate): Promise<SellerSettings | null> {
+  try {
+    const { data } = await api.patch<{ status: string; settings?: SellerSettings }>(
+      "/seller/settings",
+      payload,
+    );
+    if (data.status === "success" && data.settings) return data.settings;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerSettingsUploadLogo(file: File): Promise<string | null> {
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    const { data } = await api.post<{ status: string; shopLogoUrl?: string }>(
+      "/seller/settings/logo",
+      form,
+    );
+    if (data.status === "success" && data.shopLogoUrl) return data.shopLogoUrl;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export type SellerReportFormat = "pdf" | "excel" | "csv";
+export type SellerReportType =
+  | "sales_performance"
+  | "inventory"
+  | "vat_filing"
+  | "low_stock"
+  | "orders";
+export type SellerReportGranularity = "daily" | "weekly" | "monthly";
+
+export interface SellerReportHistoryItem {
+  id: string;
+  reportName: string;
+  reportType: SellerReportType;
+  generatedOn: string;
+  format: SellerReportFormat;
+  periodLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  granularity: SellerReportGranularity;
+  status: "ready" | "expired";
+}
+
+export interface SellerReportsHub {
+  totalThisMonth: number;
+  changePercent: number;
+  history: SellerReportHistoryItem[];
+  totalHistory: number;
+}
+
+export interface SellerGeneratedReport {
+  id: string;
+  reportName: string;
+  content: string;
+  format: SellerReportFormat;
+  history: SellerReportHistoryItem;
+}
+
+export async function sellerReportsHub(page = 1, limit = 10): Promise<SellerReportsHub | null> {
+  try {
+    const { data } = await api.get<{ status: string; hub?: SellerReportsHub }>("/seller/reports", {
+      params: { page, limit },
+    });
+    if (data.status === "success" && data.hub) return data.hub;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerReportGenerate(payload: {
+  reportType: SellerReportType;
+  format: SellerReportFormat;
+  periodStart: string;
+  periodEnd: string;
+  granularity: SellerReportGranularity;
+}): Promise<SellerGeneratedReport | null> {
+  try {
+    const { data } = await api.post<{ status: string; report?: SellerGeneratedReport }>(
+      "/seller/reports/generate",
+      payload,
+    );
+    if (data.status === "success" && data.report) return data.report;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerReportDownload(
+  reportId: string,
+): Promise<{ content: string; format: SellerReportFormat; reportName: string } | null> {
+  try {
+    const { data } = await api.get<{
+      status: string;
+      file?: { content: string; format: SellerReportFormat; reportName: string };
+    }>(`/seller/reports/${reportId}/download`);
+    if (data.status === "success" && data.file) return data.file;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerReportRegenerate(
+  reportId: string,
+): Promise<SellerGeneratedReport | null> {
+  try {
+    const { data } = await api.post<{ status: string; report?: SellerGeneratedReport }>(
+      `/seller/reports/${reportId}/regenerate`,
+    );
+    if (data.status === "success" && data.report) return data.report;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function sellerReport(): Promise<SellerReport | null> {
@@ -1223,5 +1584,200 @@ export async function chatBot(
       return { error: body.message ?? "Something went wrong." };
     }
     return { error: "Could not reach the server. Try again." };
+  }
+}
+
+export type SellerVideoStatus = "draft" | "processing" | "live" | "categorized";
+
+export interface SellerVideo {
+  id: string;
+  title: string;
+  caption: string;
+  status: SellerVideoStatus;
+  videoUrl: string;
+  thumbnailUrl: string;
+  durationSeconds: number;
+  fileSizeBytes: number;
+  visibility: string;
+  category: string;
+  linkedProductIds: string[];
+  allowBargaining: boolean;
+  minOfferPrice: number;
+  scheduledAt: string | null;
+  publishedAt: string | null;
+  views: number;
+  likes: number;
+  comments: number;
+  revenue: number;
+  uploadProgress: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface SellerVideoInsights {
+  summary: {
+    totalViews: number;
+    watchTimeHours: number;
+    conversionRate: number;
+    engagementRate: number;
+    totalRevenue: number;
+  };
+  videos: SellerVideo[];
+  topByRevenue: { videoId: string; title: string; revenue: number }[];
+}
+
+export async function sellerVideosList(params?: {
+  status?: SellerVideoStatus;
+  q?: string;
+}): Promise<SellerVideo[]> {
+  try {
+    const { data } = await api.get<{ status: string; videos?: SellerVideo[] }>("/seller/videos", {
+      params,
+    });
+    if (data.status === "success" && data.videos) return data.videos;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function sellerVideosGet(id: string): Promise<SellerVideo | null> {
+  try {
+    const { data } = await api.get<{ status: string; video?: SellerVideo }>(`/seller/videos/${id}`);
+    if (data.status === "success" && data.video) return data.video;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerVideosInsights(): Promise<SellerVideoInsights | null> {
+  try {
+    const { data } = await api.get<{ status: string } & SellerVideoInsights>(
+      "/seller/videos/insights",
+    );
+    if (data.status === "success") return data;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerVideosUpload(file: File, title?: string): Promise<SellerVideo | null> {
+  try {
+    const form = new FormData();
+    form.append("video", file);
+    if (title) form.append("title", title);
+    const { data } = await api.post<{ status: string; video?: SellerVideo }>(
+      "/seller/videos/upload",
+      form,
+      { timeout: 120000 },
+    );
+    if (data.status === "success" && data.video) return data.video;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerVideosUpdate(
+  id: string,
+  payload: Partial<{
+    title: string;
+    caption: string;
+    status: SellerVideoStatus;
+    visibility: string;
+    category: string;
+    linkedProductIds: string[];
+    allowBargaining: boolean;
+    minOfferPrice: number;
+    scheduledAt: string | null;
+  }>,
+): Promise<SellerVideo | null> {
+  try {
+    const { data } = await api.patch<{ status: string; video?: SellerVideo }>(
+      `/seller/videos/${id}`,
+      payload,
+    );
+    if (data.status === "success" && data.video) return data.video;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerVideosPublish(
+  id: string,
+  payload: Partial<{
+    caption: string;
+    visibility: string;
+    category: string;
+    linkedProductIds: string[];
+    allowBargaining: boolean;
+    minOfferPrice: number;
+    scheduledAt: string;
+  }>,
+): Promise<SellerVideo | null> {
+  try {
+    const { data } = await api.post<{ status: string; video?: SellerVideo }>(
+      `/seller/videos/${id}/publish`,
+      payload,
+    );
+    if (data.status === "success" && data.video) return data.video;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sellerVideosDelete(id: string): Promise<boolean> {
+  try {
+    const { data } = await api.delete<{ status: string }>(`/seller/videos/${id}`);
+    return data.status === "success";
+  } catch {
+    return false;
+  }
+}
+
+export interface VideoFeedItem {
+  id: string;
+  title: string;
+  caption: string;
+  videoUrl: string;
+  thumbnailUrl: string;
+  durationSeconds: number;
+  views: number;
+  likes: number;
+  comments: number;
+  allowBargaining: boolean;
+  minOfferPrice: number;
+  linkedProductIds: string[];
+  product: { id: string; name: string; price: number; imageUrl: string } | null;
+  sellerName: string;
+  publishedAt: string | null;
+}
+
+export async function listVideoFeed(params?: {
+  productId?: string;
+  limit?: number;
+  skip?: number;
+}): Promise<VideoFeedItem[]> {
+  try {
+    const { data } = await api.get<{ status: string; videos?: VideoFeedItem[] }>(
+      "/products/videos/feed",
+      { params },
+    );
+    if (data.status === "success" && data.videos) return data.videos;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function recordVideoView(videoId: string): Promise<void> {
+  try {
+    await api.post(`/products/videos/${videoId}/view`);
+  } catch {
+    /* non-blocking */
   }
 }

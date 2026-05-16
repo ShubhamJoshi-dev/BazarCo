@@ -29,7 +29,7 @@ export function ThemeSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] p-2 text-[var(--brand-white)] hover:bg-white/5 transition-colors"
+        className="flex items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] p-2 text-[var(--brand-white)] hover:bg-[var(--input-bg)] transition-colors"
         aria-label="Change theme"
       >
         <Icon className="w-4 h-4" />
@@ -50,7 +50,7 @@ export function ThemeSwitcher() {
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
                   theme === opt
                     ? "bg-[var(--brand-blue)]/20 text-[var(--brand-blue)]"
-                    : "text-[var(--brand-white)] hover:bg-white/5"
+                    : "text-[var(--brand-white)] hover:bg-[var(--input-bg)]"
                 }`}
               >
                 {opt === "light" && <Sun className="w-4 h-4" />}

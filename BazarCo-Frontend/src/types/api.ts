@@ -60,6 +60,9 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  sku?: string;
+  stock?: number;
+  brand?: string;
   imageUrl?: string;
   categoryId?: string;
   category?: string;

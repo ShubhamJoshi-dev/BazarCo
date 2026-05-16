@@ -55,10 +55,10 @@ function ConversationRow({
       className={`w-full text-left flex items-center gap-3 rounded-xl p-3 transition-all duration-200 ${
         isSelected
           ? "bg-[var(--brand-blue)]/20 border border-[var(--brand-blue)]/40"
-          : "hover:bg-white/[0.06] border border-transparent"
+          : "hover:bg-[var(--input-bg)] border border-transparent"
       }`}
     >
-      <div className="relative h-11 w-11 rounded-full bg-white/10 flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-white/10">
+      <div className="relative h-11 w-11 rounded-full bg-[var(--input-bg)] flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-[var(--brand-border)]">
         <span className="text-base font-semibold text-[var(--brand-white)]">
           {(other?.name ?? other?.email ?? "?")[0].toUpperCase()}
         </span>
@@ -277,10 +277,10 @@ export default function ChatPage() {
   const clearSelection = () => router.push("/dashboard/chat");
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] min-h-[420px] rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden shadow-xl">
+    <div className="flex flex-col h-[calc(100vh-6rem)] min-h-[420px] rounded-2xl border border-[var(--brand-border)] bg-[var(--card-bg)] overflow-hidden shadow-xl">
       <div className="flex flex-1 min-h-0">
-        <aside className="w-full sm:w-80 lg:w-96 border-r border-white/10 flex flex-col bg-white/[0.03] shrink-0">
-          <div className="p-4 border-b border-white/10">
+        <aside className="w-full sm:w-80 lg:w-96 border-r border-[var(--brand-border)] flex flex-col bg-[var(--card-bg)] shrink-0">
+          <div className="p-4 border-b border-[var(--brand-border)]">
             <h1 className="text-lg font-bold text-[var(--brand-white)] flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-[var(--brand-blue)]" />
               {t("conversations")}
@@ -329,7 +329,7 @@ export default function ChatPage() {
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col items-center justify-center p-8 text-center"
               >
-                <div className="rounded-full bg-white/5 p-6 mb-4">
+                <div className="rounded-full bg-[var(--input-bg)] p-6 mb-4">
                   <MessageCircle className="w-16 h-16 text-neutral-500" />
                 </div>
                 <p className="text-lg font-medium text-[var(--brand-white)] mb-1">{t("conversations")}</p>
@@ -354,15 +354,15 @@ export default function ChatPage() {
                 exit={{ opacity: 0 }}
                 className="flex flex-col flex-1 min-h-0"
               >
-                <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3 shrink-0 bg-white/[0.02]">
+                <header className="flex items-center gap-3 border-b border-[var(--brand-border)] px-4 py-3 shrink-0 bg-[var(--card-bg)]">
                   <button
                     type="button"
                     onClick={clearSelection}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-[var(--brand-white)] hover:bg-white/5 sm:hidden"
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-[var(--brand-white)] hover:bg-[var(--input-bg)] sm:hidden"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className="relative h-10 w-10 rounded-full bg-white/10 flex items-center justify-center shrink-0 ring-2 ring-white/10">
+                  <div className="relative h-10 w-10 rounded-full bg-[var(--input-bg)] flex items-center justify-center shrink-0 ring-2 ring-[var(--brand-border)]">
                     <span className="text-sm font-semibold text-[var(--brand-white)]">{otherName[0].toUpperCase()}</span>
                   </div>
                   <div className="min-w-0 flex-1">
@@ -399,7 +399,7 @@ export default function ChatPage() {
                       <div key={msg.messageId} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
-                            isOwn ? "bg-[var(--brand-blue)] text-white shadow-lg shadow-[var(--brand-blue)]/20" : "bg-white/10 text-[var(--brand-white)] border border-white/10"
+                            isOwn ? "bg-[var(--brand-blue)] text-white shadow-lg shadow-[var(--brand-blue)]/20" : "bg-[var(--input-bg)] text-[var(--brand-white)] border border-[var(--brand-border)]"
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap break-words">
@@ -434,7 +434,7 @@ export default function ChatPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="border-t border-white/10 p-3 shrink-0 bg-white/[0.02]">
+                <div className="border-t border-[var(--brand-border)] p-3 shrink-0 bg-[var(--card-bg)]">
                   {!connected && (
                     <p className="text-xs text-amber-400 mb-2">Reconnecting… Send will work when connected.</p>
                   )}
@@ -445,7 +445,7 @@ export default function ChatPage() {
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
                       placeholder={connected ? t("typeMessage") : t("typeMessage") + " (connecting…)"}
-                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/50"
+                      className="flex-1 rounded-xl border border-[var(--brand-border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--brand-white)] placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/50 focus:border-[var(--brand-blue)]/50"
                       disabled={!connected}
                     />
                     <button

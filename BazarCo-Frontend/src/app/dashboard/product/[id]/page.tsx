@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import { Toast } from "@/components/Toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { ProductDetailMarketView } from "@/components/marketplace/ProductDetailMarketView";
 
 /* ─── Avatar gradient ── */
 function Avatar({ name, size = 10, colors }: { name: string; size?: number; colors: [string, string] }) {
@@ -459,6 +460,14 @@ export default function ProductDetailPage() {
     if (result.success) setCartToast({ show: true, message: `${result.productName ?? data.product.name} added to cart` });
   };
 
+  const handleBuyNow = async () => {
+    if (!id || !data?.product) return;
+    setAddingToCart(true);
+    const result = await addToCart(id, cartQty);
+    setAddingToCart(false);
+    if (result.success) router.push("/dashboard/checkout");
+  };
+
   /* ── Loading ── */
   if (loading) {
     return (
@@ -488,227 +497,14 @@ export default function ProductDetailPage() {
     );
   }
 
-  const { product, reviews, reviewCount, averageRating, sellerKycVerified } = data;
+  const { reviews, reviewCount, averageRating } = data;
 
   /* Rating distribution */
   const ratingDist: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   reviews.forEach((r) => { if (r.rating && r.rating >= 1 && r.rating <= 5) ratingDist[r.rating]++; });
 
-  const pageVariants = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
-  const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 320, damping: 26 } } };
-
-  return (
-    <motion.div className="space-y-8" variants={pageVariants} initial="hidden" animate="show">
-      <Toast message={cartToast.message} visible={cartToast.show} onDismiss={() => setCartToast((p) => ({ ...p, show: false }))} duration={3500} />
-      <Toast message={actionToast.message} visible={actionToast.show} onDismiss={() => setActionToast((p) => ({ ...p, show: false }))} duration={actionToast.isError ? 5000 : 3500} variant={actionToast.isError ? "error" : "success"} />
-
-      {/* Back */}
-      <motion.div variants={{ hidden: { opacity: 0, x: -12 }, show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 400 } } }}>
-        <Link href="/dashboard/browse"
-          className="inline-flex items-center gap-2 text-sm text-[var(--brand-muted)] hover:text-[var(--foreground)] transition-colors group">
-          <motion.span whileHover={{ x: -3 }} transition={{ type: "spring", stiffness: 500 }}>
-            <ArrowLeft className="w-4 h-4" />
-          </motion.span>
-          Back to Browse
-        </Link>
-      </motion.div>
-
-      {/* ── Product hero ── */}
-      <motion.div variants={fadeUp} className="grid gap-8 lg:gap-12 lg:grid-cols-[1fr_1fr]">
-
-        {/* Image */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.08, type: "spring", stiffness: 280, damping: 24 }}
-          className="relative aspect-square clay-card overflow-hidden group cursor-zoom-in"
-          style={{ padding: 0 }}
-          whileHover={{ scale: 1.01 }}
-        >
-          {product.imageUrl ? (
-            <Image src={product.imageUrl} alt={product.name} fill
-              className="object-cover transition-transform duration-700 group-hover:scale-[1.08]"
-              sizes="(max-width: 1024px) 100vw, 50vw" priority />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-[var(--brand-muted)]">
-              <ImageIcon className="w-24 h-24" />
-            </div>
-          )}
-          {/* Category overlay */}
-          {product.category && (
-            <div className="absolute top-4 left-4">
-              <motion.span initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="clay-badge-blue text-xs font-bold px-3 py-1.5"
-              >
-                {product.category}
-              </motion.span>
-            </div>
-          )}
-          {/* Like button on image */}
-          <motion.button
-            type="button" onClick={handleLike}
-            whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.85 }}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}
-          >
-            <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.4 }}>
-              <Heart className={`w-5 h-5 transition-colors ${liked ? "fill-[var(--brand-red)] text-[var(--brand-red)]" : "text-white"}`} />
-            </motion.span>
-          </motion.button>
-        </motion.div>
-
-        {/* Details */}
-        <motion.div
-          className="flex flex-col gap-5"
-          initial="hidden" animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
-        >
-          {/* Badges */}
-          <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
-            {sellerKycVerified && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 px-3 py-1.5 text-xs font-semibold border border-emerald-500/30"
-                style={{ boxShadow: "0 2px 10px rgba(34,197,94,0.2)" }}>
-                <ShieldCheck className="w-3.5 h-3.5" /> {tDB("verifiedSeller")}
-              </span>
-            )}
-            {(product.tags?.length ?? 0) > 0 && product.tags!.slice(0, 3).map((tag) => (
-              <span key={tag} className="clay-badge-blue text-xs">{tag}</span>
-            ))}
-          </motion.div>
-
-          {/* Name */}
-          <motion.h1 variants={fadeUp}
-            className="text-3xl sm:text-4xl font-black text-[var(--foreground)] leading-tight tracking-tight">
-            {product.name}
-          </motion.h1>
-
-          {/* Price */}
-          <motion.div variants={fadeUp} className="flex items-baseline gap-3">
-            <span className="text-4xl font-black text-[var(--brand-blue)]" style={{ textShadow: "0 0 30px rgba(77,166,255,0.3)" }}>
-              {formatPrice(Number(product.price))}
-            </span>
-          </motion.div>
-
-          {/* Description */}
-          {product.description && (
-            <motion.p variants={fadeUp} className="text-[var(--brand-muted)] leading-relaxed text-sm">
-              {product.description}
-            </motion.p>
-          )}
-
-          {/* Rating + likes bar */}
-          <motion.div variants={fadeUp}
-            className="flex flex-wrap items-center gap-4 py-3.5 px-4 rounded-2xl bg-[var(--card-bg)] border border-[var(--brand-border)]">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((r) => (
-                  <Star key={r} className={`w-4 h-4 ${averageRating >= r ? "text-amber-400 fill-amber-400" : "text-[var(--brand-border)]"}`} />
-                ))}
-              </div>
-              <span className="font-bold text-[var(--foreground)] text-sm">{averageRating > 0 ? averageRating.toFixed(1) : "—"}</span>
-              <span className="text-xs text-[var(--brand-muted)]">({reviewCount})</span>
-            </div>
-            <div className="h-4 w-px bg-[var(--brand-border)]" />
-            <motion.button type="button" onClick={handleLike}
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}
-              className={`flex items-center gap-2 text-sm font-semibold transition-colors ${liked ? "text-[var(--brand-red)]" : "text-[var(--brand-muted)] hover:text-[var(--foreground)]"}`}>
-              <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-                <Heart className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
-              </motion.span>
-              {likeCount} likes
-            </motion.button>
-          </motion.div>
-
-          {/* Qty + Add to cart */}
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center rounded-2xl border border-[var(--brand-border)] bg-[var(--card-bg)] overflow-hidden w-fit">
-              <motion.button type="button" onClick={() => setCartQty((q) => Math.max(1, q - 1))}
-                whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.92 }}
-                className="px-4 py-3 text-[var(--foreground)] font-bold text-lg transition-colors">−</motion.button>
-              <span className="px-5 py-3 min-w-[3rem] text-center font-black text-[var(--foreground)]">{cartQty}</span>
-              <motion.button type="button" onClick={() => setCartQty((q) => q + 1)}
-                whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.92 }}
-                className="px-4 py-3 text-[var(--foreground)] font-bold text-lg transition-colors">+</motion.button>
-            </div>
-            <motion.button type="button" onClick={handleAddToCart} disabled={addingToCart}
-              whileHover={!addingToCart ? { scale: 1.03, y: -1 } : {}} whileTap={!addingToCart ? { scale: 0.96 } : {}}
-              className="flex-1 flex items-center justify-center gap-2.5 rounded-2xl bg-[var(--brand-blue)] px-6 py-3.5 font-bold text-white disabled:opacity-60 transition-all"
-              style={{ boxShadow: "0 6px 24px -4px rgba(77,166,255,0.5)" }}
-            >
-              <AnimatePresence mode="wait">
-                {addingToCart ? (
-                  <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}>
-                      <Loader2 className="w-5 h-5" />
-                    </motion.span> Adding…
-                  </motion.span>
-                ) : (
-                  <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                    <ShoppingCart className="w-5 h-5" /> Add to cart
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          </motion.div>
-
-          {/* Buyer actions */}
-          {user && user.id !== product.sellerId && (
-            <>
-              {/* Message seller */}
-              <motion.div variants={fadeUp}>
-                <motion.button type="button" onClick={handleMessageSeller} disabled={startingChat}
-                  whileHover={!startingChat ? { scale: 1.03, y: -1 } : {}} whileTap={!startingChat ? { scale: 0.96 } : {}}
-                  className="clay-card-blue w-full flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-[var(--brand-blue)] rounded-2xl disabled:opacity-50"
-                >
-                  {startingChat
-                    ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}><Loader2 className="w-4 h-4" /></motion.span>
-                    : <MessageSquare className="w-4 h-4" />
-                  }
-                  {tChat("messageSeller")}
-                </motion.button>
-              </motion.div>
-
-              {/* Make an offer */}
-              <motion.div variants={fadeUp} className="clay-card p-5 space-y-4" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.06), transparent)" }}>
-                <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
-                  <HandCoins className="w-4 h-4 text-amber-400" /> {t("makeOffer")}
-                </h3>
-                {myOffer ? (
-                  <div className="flex items-center gap-2.5 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-[var(--brand-muted)]">{t("youHaveOffer")}</span>
-                    <Link href="/dashboard/offers" className="text-[var(--brand-blue)] hover:underline font-semibold">
-                      {t("myOffers")}
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <input type="number" step="0.01" min="0" placeholder="Your price"
-                      value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)}
-                      className="clay-input px-4 py-2.5 text-sm w-full sm:w-32 text-[var(--foreground)] placeholder:text-[var(--brand-muted)]" />
-                    <input type="text" placeholder="Message (optional)"
-                      value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)}
-                      className="clay-input flex-1 px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--brand-muted)]" />
-                    <motion.button type="button" onClick={handleSubmitOffer}
-                      disabled={submittingOffer || !offerPrice.trim()}
-                      whileHover={!submittingOffer && offerPrice.trim() ? { scale: 1.04 } : {}} whileTap={{ scale: 0.95 }}
-                      className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black disabled:opacity-50 flex items-center gap-2 justify-center shrink-0"
-                      style={{ boxShadow: "0 4px 14px rgba(245,158,11,0.3)" }}
-                    >
-                      {submittingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      {t("makeOffer")}
-                    </motion.button>
-                  </div>
-                )}
-              </motion.div>
-            </>
-          )}
-        </motion.div>
-      </motion.div>
-
-      {/* ── Reviews section ── */}
-      <motion.section variants={fadeUp} className="space-y-6">
-
+  const reviewsBlock = (
+    <section className="space-y-6">
         {/* Rating summary */}
         <div className="clay-card p-6">
           <h2 className="text-xl font-black text-[var(--foreground)] mb-5">Customer Reviews</h2>
@@ -810,7 +606,33 @@ export default function ProductDetailPage() {
             ))}
           </motion.div>
         )}
-      </motion.section>
-    </motion.div>
+    </section>
+  );
+
+  return (
+    <>
+      <Toast message={cartToast.message} visible={cartToast.show} onDismiss={() => setCartToast((p) => ({ ...p, show: false }))} duration={3500} />
+      <Toast message={actionToast.message} visible={actionToast.show} onDismiss={() => setActionToast((p) => ({ ...p, show: false }))} duration={actionToast.isError ? 5000 : 3500} variant={actionToast.isError ? "error" : "success"} />
+      <ProductDetailMarketView
+        data={data}
+        user={user}
+        liked={liked}
+        likeCount={likeCount}
+        onLike={handleLike}
+        myOffer={myOffer}
+        offerPrice={offerPrice}
+        offerMessage={offerMessage}
+        onOfferPrice={setOfferPrice}
+        onOfferMessage={setOfferMessage}
+        onSubmitOffer={handleSubmitOffer}
+        submittingOffer={submittingOffer}
+        onMessageSeller={handleMessageSeller}
+        startingChat={startingChat}
+        addingToCart={addingToCart}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        reviewsSection={reviewsBlock}
+      />
+    </>
   );
 }

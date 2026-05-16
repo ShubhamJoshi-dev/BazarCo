@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrderById, updateOrderStatus, createConversationByOrder, type Order } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { BuyerTrackOrderView } from "@/components/marketplace/BuyerTrackOrderView";
 
 /* ─── Helpers ─────────────────────────────────────────── */
 function formatDate(iso: string) {
@@ -163,7 +164,7 @@ function Skeleton() {
 export default function OrderDetailPage() {
   const params = useParams();
   const id     = typeof params.id === "string" ? params.id : "";
-  const { user }   = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const t          = useTranslations("orders");
   const { formatPrice } = useCurrency();
   const isSeller   = user?.role === "seller";
@@ -175,9 +176,13 @@ export default function OrderDetailPage() {
   const [startingChat, setStartingChat] = useState(false);
 
   useEffect(() => {
-    if (!id) { setLoading(false); return; }
+    if (!id || !isSeller) { setLoading(false); return; }
     getOrderById(id).then((o) => { setOrder(o ?? null); setLoading(false); });
-  }, [id]);
+  }, [id, isSeller]);
+
+  if (!authLoading && user?.role !== "seller") {
+    return <BuyerTrackOrderView orderId={id} />;
+  }
 
   const handleStatusChange = async (newStatus: string) => {
     if (!order || !isSeller) return;
