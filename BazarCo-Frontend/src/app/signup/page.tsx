@@ -109,9 +109,15 @@ export default function SignupPage() {
     { label: "match", ok: confirmPassword.length > 0 && password === confirmPassword },
   ];
 
+  const isAgreementStep = step === "agreement";
+
   return (
     <RedirectIfAuthed>
-      <AuthLayout title={t("signUpTitle")} subtitle={t("signUpSubtitle")}>
+      <AuthLayout
+        variant={isAgreementStep ? "wide" : "default"}
+        title={isAgreementStep ? t("sellerAgreementTitle") : t("signUpTitle")}
+        subtitle={isAgreementStep ? t("sellerAgreementSubtitle") : t("signUpSubtitle")}
+      >
         <AnimatePresence mode="wait">
           {step === "role" && (
             <motion.div
@@ -195,25 +201,30 @@ export default function SignupPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
               transition={{ duration: 0.28 }}
-              className="space-y-4"
+              className="flex min-h-0 flex-1 flex-col"
             >
-              <div className="flex items-center gap-2 clay-badge-red" style={{ display: "inline-flex", borderRadius: 999, padding: "6px 12px" }}>
-                <FileText className="w-3.5 h-3.5" />
-                <span className="text-xs font-bold">{t("sellerAgreementTitle")}</span>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <span className="clay-badge-red inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold">
+                  <FileText className="h-4 w-4" />
+                  {t("sellerAgreementStep")}
+                </span>
+                <span className="text-xs font-medium text-[var(--brand-muted)]">
+                  {t("sellerAgreementScrollHint")}
+                </span>
               </div>
-              <p className="text-xs text-[var(--brand-muted)]">{t("sellerAgreementSubtitle")}</p>
 
               {error && (
-                <div className="rounded-2xl bg-[var(--brand-red)]/12 border border-[var(--brand-red)]/35 px-4 py-3 text-sm text-[var(--brand-red)]">
+                <div className="mb-4 rounded-2xl border border-[var(--brand-red)]/35 bg-[var(--brand-red)]/12 px-4 py-3 text-sm text-[var(--brand-red)]">
                   {error}
                 </div>
               )}
 
-              <div className="max-h-[min(52vh,420px)] overflow-y-auto rounded-2xl border border-[var(--brand-border)] bg-neutral-50 p-4 text-left text-xs scrollbar-hide">
+              <div className="min-h-[min(50vh,520px)] flex-1 overflow-y-auto rounded-2xl border border-[var(--brand-border)] bg-gradient-to-b from-neutral-50 to-white p-5 shadow-inner sm:min-h-[min(58vh,580px)] sm:p-6 lg:p-8 scrollbar-hide">
                 <SellerAgreementDocument />
               </div>
 
-              <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div className="mt-5 shrink-0 space-y-4 border-t border-[var(--brand-border)] pt-5">
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--brand-border)] bg-white/80 p-4 text-left transition-colors hover:border-[var(--brand-red)]/30">
                 <input
                   type="checkbox"
                   checked={agreedToSellerTerms}
@@ -221,19 +232,19 @@ export default function SignupPage() {
                     setAgreedToSellerTerms(e.target.checked);
                     if (e.target.checked) setError("");
                   }}
-                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-[var(--brand-red)] focus:ring-[var(--brand-red)]"
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 text-[var(--brand-red)] focus:ring-[var(--brand-red)]"
                 />
-                <span className="text-xs leading-relaxed text-[var(--foreground)]">{t("agreeLabel")}</span>
+                <span className="text-sm leading-relaxed text-[var(--foreground)]">{t("agreeLabel")}</span>
               </label>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
                     setError("");
                     setStep("role");
                   }}
-                  className="flex-1 rounded-2xl border border-[var(--brand-border)] py-3 text-sm font-semibold hover:bg-neutral-50"
+                  className="flex-1 rounded-2xl border border-[var(--brand-border)] py-3.5 text-sm font-semibold hover:bg-neutral-50"
                 >
                   {t("back")}
                 </button>
@@ -241,10 +252,11 @@ export default function SignupPage() {
                   type="button"
                   disabled={!agreedToSellerTerms}
                   onClick={handleAgreementContinue}
-                  className="clay-btn-red flex-[2] py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="clay-btn-red flex flex-[2] items-center justify-center gap-2 py-3.5 text-sm disabled:opacity-40 sm:text-base"
                 >
-                  {t("continue")} <ArrowRight className="w-4 h-4" />
+                  {t("continue")} <ArrowRight className="h-4 w-4" />
                 </button>
+              </div>
               </div>
             </motion.div>
           )}

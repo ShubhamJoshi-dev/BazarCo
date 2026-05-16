@@ -758,6 +758,8 @@
     "signingIn": "Signing in…",
     "forgotPassword": "Forgot password?",
     "sellerAgreementTitle": "Seller agreement",
+    "sellerAgreementStep": "Step 2 of 3 · Legal review",
+    "sellerAgreementScrollHint": "Scroll to read all sections",
     "sellerAgreementSubtitle": "Read the Seller Agreement, Buyer Terms & Conditions, and Privacy Policy below before creating your seller account.",
     "agreeLabel": "I have read and agree to the BazarCo Seller Agreement, Buyer Terms & Conditions, and Privacy Policy.",
     "mustAgree": "You must accept the seller agreement to continue",
