@@ -29,11 +29,25 @@ function toProductDto(
   const tagIds = Array.isArray(doc.tagIds)
     ? (doc.tagIds as Types.ObjectId[]).map((t) => t.toString())
     : [];
+  const status = (doc.status as string) ?? "active";
+  const stockRaw = doc.stock as number | undefined;
+  const stock =
+    typeof stockRaw === "number" && !Number.isNaN(stockRaw)
+      ? stockRaw
+      : status === "archived"
+        ? 0
+        : 50;
+  const sku =
+    (typeof doc.sku === "string" && doc.sku.trim()) ||
+    `SKU-${doc._id.toString().slice(-6).toUpperCase()}`;
   return {
     id: doc._id.toString(),
     name: doc.name,
     description: doc.description,
     price: doc.price,
+    sku,
+    stock,
+    brand: typeof doc.brand === "string" ? doc.brand.trim() : "",
     imageUrl: doc.imageUrl,
     status: doc.status,
     shopifyProductId: doc.shopifyProductId,
@@ -57,8 +71,24 @@ export async function listProducts(req: ReqWithUser, res: Response): Promise<voi
     ? req.query.status
     : undefined;
   const products = await productRepo.findBySellerId(user.id, status ? { status } : undefined);
+  const categoryIds = [
+    ...new Set(
+      products
+        .map((p) => (p as { categoryId?: Types.ObjectId }).categoryId?.toString())
+        .filter(Boolean) as string[],
+    ),
+  ];
+  const categoryMap = new Map<string, string>();
+  for (const cid of categoryIds) {
+    const cat = await categoryRepo.findCategoryById(cid);
+    if (cat) categoryMap.set(cid, cat.name);
+  }
   successResponse(res, 200, "Products listed", {
-    products: products.map((p) => toProductDto(p as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId })),
+    products: products.map((p) => {
+      const doc = p as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId; categoryId?: Types.ObjectId };
+      const cid = doc.categoryId?.toString();
+      return toProductDto(doc, { category: cid ? categoryMap.get(cid) : undefined });
+    }),
   });
 }
 
@@ -98,6 +128,15 @@ export async function createProduct(req: ReqWithUser, res: Response): Promise<vo
     errorResponse(res, 400, "Valid price is required");
     return;
   }
+  const sku =
+    typeof req.body.sku === "string" && req.body.sku.trim()
+      ? req.body.sku.trim().slice(0, 64)
+      : `SKU-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const stock =
+    typeof req.body.stock !== "undefined"
+      ? Math.max(0, Math.floor(Number(req.body.stock)) || 0)
+      : 50;
+  const brand = typeof req.body.brand === "string" ? req.body.brand.trim().slice(0, 120) : "";
 
   let categoryName: string | undefined;
   if (categoryId) {
@@ -137,11 +176,14 @@ const product = await productRepo.createProduct({
   name,
   description: description || undefined,
   price,
+  sku,
+  stock,
+  brand: brand || undefined,
   imageUrl,
   categoryId: categoryId || undefined,
   tagIds: tagIds.length ? tagIds : undefined,
   shopifyProductId,
-  shopifyVariantId, // 🔹 NEW FIELD
+  shopifyVariantId,
   sellerId: user.id,
 });
 
@@ -205,6 +247,9 @@ export async function updateProduct(req: ReqWithUser, res: Response): Promise<vo
     name?: string;
     description?: string;
     price?: number;
+    sku?: string;
+    stock?: number;
+    brand?: string;
     imageUrl?: string;
     categoryId?: string | null;
     tagIds?: string[];
@@ -212,6 +257,11 @@ export async function updateProduct(req: ReqWithUser, res: Response): Promise<vo
   if (name !== undefined) update.name = name;
   if (description !== undefined) update.description = description;
   if (price !== undefined) update.price = price;
+  if (typeof req.body.sku === "string") update.sku = req.body.sku.trim().slice(0, 64);
+  if (typeof req.body.stock !== "undefined") {
+    update.stock = Math.max(0, Math.floor(Number(req.body.stock)) || 0);
+  }
+  if (typeof req.body.brand === "string") update.brand = req.body.brand.trim().slice(0, 120);
   if (imageUrl !== undefined) update.imageUrl = imageUrl;
   if (categoryId !== undefined) update.categoryId = categoryId;
   if (tagIds !== undefined) update.tagIds = tagIds;

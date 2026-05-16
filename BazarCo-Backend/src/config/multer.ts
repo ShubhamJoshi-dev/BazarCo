@@ -24,3 +24,26 @@ export const uploadKycDocument = multer({
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 }).single("document");
+
+const videoFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
+  const allowed = [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/mpeg",
+  ];
+  const mimetype = file.mimetype?.toLowerCase?.() ?? "";
+  if (mimetype && (allowed.includes(mimetype) || mimetype.startsWith("video/"))) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only video files (MP4, WebM, MOV) are allowed"));
+  }
+};
+
+/** Seller short-form video upload (field name: video) */
+export const uploadSingleVideo = multer({
+  storage,
+  fileFilter: videoFilter,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+}).single("video");

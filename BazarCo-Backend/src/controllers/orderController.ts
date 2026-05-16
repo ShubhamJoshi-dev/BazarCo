@@ -24,11 +24,42 @@ export async function listOrders(req: ReqWithUser, res: Response): Promise<void>
     : await orderRepo.findByBuyerId(user.id, status ? { status } : undefined);
 
   const orders = docs.map((d) => {
-    const doc = d as Record<string, unknown> & { _id: { toString(): string }; buyerId: unknown; sellerId: unknown; items: unknown[]; total: number; status: string; createdAt: Date; shippingAddress?: unknown; riderId?: { _id: { toString(): string }; name: string; phone?: string } | null; urgent?: boolean };
+    const doc = d as Record<string, unknown> & {
+      _id: { toString(): string };
+      buyerId: unknown;
+      sellerId: unknown;
+      items: unknown[];
+      total: number;
+      status: string;
+      createdAt: Date;
+      shippingAddress?: { city?: string; state?: string; country?: string };
+      riderId?: { _id: { toString(): string }; name: string; phone?: string } | null;
+      urgent?: boolean;
+    };
     const rider = doc.riderId;
+    const rawBuyer = doc.buyerId;
+    let buyerId = "";
+    let customerName: string | undefined;
+    let customerEmail: string | undefined;
+    if (rawBuyer && typeof rawBuyer === "object" && rawBuyer !== null && "_id" in rawBuyer) {
+      const b = rawBuyer as { _id: { toString(): string }; name?: string; email?: string };
+      buyerId = b._id.toString();
+      customerEmail = b.email;
+      customerName = b.name?.trim() || b.email?.split("@")[0] || "Customer";
+    } else if (rawBuyer) {
+      buyerId = String(rawBuyer);
+    }
+    const id = doc._id.toString();
+    const tail = id.replace(/[^a-f0-9]/gi, "").slice(-4).toUpperCase() || "0000";
+    const ship = doc.shippingAddress;
+    const locationParts = [ship?.city, ship?.state, ship?.country].filter(Boolean);
     return {
-      id: doc._id.toString(),
-      buyerId: doc.buyerId?.toString?.() ?? doc.buyerId,
+      id,
+      orderNumber: `#ORD-${tail}`,
+      buyerId,
+      customerName,
+      customerEmail,
+      customerLocation: locationParts.length ? locationParts.join(", ") : undefined,
       sellerId: doc.sellerId?.toString?.() ?? doc.sellerId,
       items: doc.items ?? [],
       total: doc.total,

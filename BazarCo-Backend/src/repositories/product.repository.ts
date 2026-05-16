@@ -6,6 +6,9 @@ export async function createProduct(data: {
   name: string;
   description?: string;
   price: number;
+  sku?: string;
+  stock?: number;
+  brand?: string;
   imageUrl?: string;
   categoryId?: Types.ObjectId | string;
   tagIds?: (Types.ObjectId | string)[];
@@ -47,6 +50,9 @@ export async function updateProduct(
     name?: string;
     description?: string;
     price?: number;
+    sku?: string;
+    stock?: number;
+    brand?: string;
     imageUrl?: string;
     categoryId?: Types.ObjectId | string | null;
     tagIds?: (Types.ObjectId | string)[];

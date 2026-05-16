@@ -1,4 +1,5 @@
 import cors from "cors";
+import path from "path";
 import express, { type Express, type Request, type Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import { env } from "./config/env";
@@ -56,6 +57,7 @@ export function createApp(): Express {
   app.use(cors(corsOptions));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
   app.get("/api-docs.json", (_req: Request, res: Response) => {

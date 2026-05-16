@@ -210,9 +210,12 @@ export async function getKycStatus(req: ReqWithUser, res: Response): Promise<voi
   const kycVerified =
     documents.length > 0 && userKycVerified && (!hasNationalCard || hasValidNationalId);
 
+  const kycLean = kyc as { status?: string; rejectionReason?: string } | null;
+
   successResponse(res, 200, "KYC status", {
     kycVerified,
-    status: kyc?.status ?? "pending",
+    status: kycLean?.status ?? "pending",
+    rejectionReason: kycLean?.rejectionReason ?? undefined,
     documents: documents.map((d: Record<string, unknown> & { _id: Types.ObjectId; documentType: string; fileUrl: string; publicId?: string; createdAt?: Date; extractedData?: unknown; isValidNationalId?: boolean; extractionStatus?: string; extractionError?: string }) => ({
       id: d._id.toString(),
       documentType: d.documentType,

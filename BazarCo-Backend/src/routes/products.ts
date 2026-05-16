@@ -14,11 +14,14 @@ import {
 } from "../controllers/productController";
 import { addOrUpdateReview, addReaction, uploadReviewImageHandler } from "../controllers/reviewController";
 import { toggleLike } from "../controllers/likeController";
+import { listVideoFeed, recordVideoView } from "../controllers/videoFeedController";
 
 export const productsRouter = Router();
 
 productsRouter.use(requireAuth);
 productsRouter.get("/browse", browseProducts);
+productsRouter.get("/videos/feed", listVideoFeed);
+productsRouter.post("/videos/:id/view", recordVideoView);
 productsRouter.get("/", listProducts);
 productsRouter.get("/:id", getProductById);
 productsRouter.post("/:id/reviews/upload-image", (req, res, next) => {

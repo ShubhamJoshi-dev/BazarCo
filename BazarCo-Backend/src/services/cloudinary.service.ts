@@ -56,6 +56,34 @@ export async function uploadReviewImage(buffer: Buffer): Promise<string | null> 
   return uploadImage(buffer, "bazarco/reviews");
 }
 
+/** Upload seller short video. Returns url and optional thumbnail. */
+export async function uploadVideo(
+  buffer: Buffer,
+  folder = "bazarco/videos",
+): Promise<{ url: string; thumbnailUrl?: string } | null> {
+  if (!isCloudinaryConfigured()) return null;
+  return new Promise((resolve) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: "video" },
+      (err, result) => {
+        if (err || !result?.secure_url) {
+          resolve(null);
+          return;
+        }
+        const thumb =
+          typeof result.eager !== "undefined" && Array.isArray(result.eager) && result.eager[0]?.secure_url
+            ? result.eager[0].secure_url
+            : undefined;
+        resolve({
+          url: result.secure_url,
+          thumbnailUrl: thumb,
+        });
+      },
+    );
+    uploadStream.end(buffer);
+  });
+}
+
 /** Delete an image by Cloudinary public_id. Returns true if deleted or not configured. */
 export async function deleteByPublicId(publicId: string): Promise<boolean> {
   if (!isCloudinaryConfigured() || !publicId?.trim()) return true;
