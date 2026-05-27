@@ -15,6 +15,7 @@ export async function createProduct(data: {
   shopifyProductId?: string;
   shopifyVariantId?: string;
   sellerId: string | Types.ObjectId;
+  status?: ProductStatus;
 }) {
   const doc = await Product.create(data);
   return doc.toObject() as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId };

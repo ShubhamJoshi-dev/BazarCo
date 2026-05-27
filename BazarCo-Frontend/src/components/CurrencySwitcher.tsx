@@ -5,9 +5,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { useCurrency, CURRENCY_META, type Currency } from "@/contexts/CurrencyContext";
 
-const CURRENCIES: Currency[] = ["USD", "NPR", "AUD"];
+const CURRENCIES: Currency[] = ["NPR", "USD", "AUD"];
 
-export function CurrencySwitcher() {
+export function CurrencySwitcher({
+  compact = false,
+  menuPlacement = "bottom",
+  alignMenu = "start",
+}: {
+  compact?: boolean;
+  menuPlacement?: "top" | "bottom";
+  alignMenu?: "start" | "end";
+}) {
   const { currency, setCurrency, rates, ratesLoading } = useCurrency();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -23,18 +31,21 @@ export function CurrencySwitcher() {
   const current = CURRENCY_META[currency];
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <motion.button
         type="button"
         onClick={() => setOpen((o) => !o)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.97 }}
-        className="flex items-center gap-1.5 rounded-2xl border border-[var(--brand-border)] bg-[var(--card-bg)] px-2.5 py-1.5 text-sm font-semibold text-[var(--foreground)] transition-all"
+        className={`flex items-center gap-1.5 rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] py-1.5 text-sm font-semibold text-[var(--foreground)] transition-all ${
+          compact ? "px-2" : "rounded-2xl px-2.5"
+        }`}
         style={{ boxShadow: "var(--clay-shadow-neutral)" }}
         aria-expanded={open}
+        aria-label={`Currency: ${currency}`}
       >
         <span className="text-base leading-none">{current.flag}</span>
-        <span className="hidden sm:block text-xs">{currency}</span>
+        {!compact && <span className="hidden sm:block text-xs">{currency}</span>}
         {ratesLoading ? (
           <RefreshCw className="w-3 h-3 text-[var(--brand-muted)] animate-spin" />
         ) : (
@@ -49,8 +60,16 @@ export function CurrencySwitcher() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-52 clay-card py-2 z-50"
-            style={{ borderRadius: "18px" }}
+            className={`absolute z-[60] clay-card py-2 ${
+              menuPlacement === "top"
+                ? alignMenu === "end"
+                  ? "bottom-full right-0 mb-2 w-52 max-w-[calc(16rem-0.5rem)]"
+                  : "bottom-full left-0 mb-2 w-52 max-w-[calc(16rem-0.5rem)]"
+                : alignMenu === "end"
+                  ? "right-0 top-full mt-2 w-52"
+                  : "left-0 top-full mt-2 w-52"
+            }`}
+            style={{ borderRadius: compact ? "12px" : "18px" }}
           >
             <p className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
               Select Currency

@@ -5,7 +5,7 @@ export const LOW_STOCK_THRESHOLD = 10;
 export type StockLevel = "in_stock" | "low_stock" | "out_of_stock";
 
 export function getStockLevel(product: Product): StockLevel {
-  if (product.status === "archived") return "out_of_stock";
+  if (product.status === "draft" || product.status === "archived") return "out_of_stock";
   const stock = product.stock ?? 0;
   if (stock <= 0) return "out_of_stock";
   if (stock < LOW_STOCK_THRESHOLD) return "low_stock";

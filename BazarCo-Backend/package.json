@@ -15,6 +15,7 @@
     "docker:down": "docker compose down",
     "start:ts": "tsx src/server.ts",
     "seed:dev": "tsx scripts/seed-dev-users.ts",
+    "seed:admin": "tsx scripts/seed-admin-users.ts",
     "seed:riders": "tsx scripts/seed-riders.ts",
     "seed:products": "tsx scripts/seed-products.ts",
     "script:delete-shopify": "tsx scripts/delete-shopify-products-collections.ts"

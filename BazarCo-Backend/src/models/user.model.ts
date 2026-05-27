@@ -25,8 +25,26 @@ const userSchema = new mongoose.Schema(
     ratingCount: { type: Number, default: 0, min: 0 },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
+    emailVerified: { type: Boolean, default: true },
+    suspendedAt: { type: Date, default: null },
+    suspendedReason: { type: String, trim: true, maxlength: 500 },
+    deletedAt: { type: Date, default: null },
+    messagingBanned: { type: Boolean, default: false },
+    tokenVersion: { type: Number, default: 0 },
+    lastLoginAt: { type: Date },
+    loginHistory: [
+      {
+        ip: { type: String, trim: true },
+        userAgent: { type: String, trim: true, maxlength: 512 },
+        at: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true, collection: "users" }
 );
+
+userSchema.index({ deletedAt: 1 });
+userSchema.index({ suspendedAt: 1 });
+userSchema.index({ role: 1, createdAt: -1 });
 
 export const User = mongoose.model("User", userSchema);

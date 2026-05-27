@@ -123,36 +123,29 @@ export function SellerDashboardLayout({ children }: { children: React.ReactNode 
 
   const sidebarInner = (
     <>
-      <div className={`border-b border-[var(--brand-border)] ${collapsed ? "px-2 py-3" : "px-4 py-4"}`}>
-        <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-2"}`}>
-          <Link
-            href="/dashboard"
-            onClick={closeMobile}
-            className={`flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-red)] rounded-lg ${
-              collapsed ? "justify-center" : "gap-2.5 min-w-0"
-            }`}
-          >
-            {collapsed ? (
-              <Image src="/logo.png" alt="BazarCo" width={36} height={36} className="h-9 w-9 object-contain" />
-            ) : (
-              <>
-                <Image src="/logo.png" alt="BazarCo" width={100} height={42} className="h-8 w-auto shrink-0" />
-                <span className="text-base font-bold tracking-tight text-[var(--brand-red)] truncate">
-                  {t("brandName")}
-                </span>
-              </>
-            )}
-          </Link>
-          {!collapsed && (
-            <button
-              type="button"
-              className="hidden lg:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[var(--input-bg)] text-[var(--brand-muted)] hover:text-[var(--foreground)] hover:border-[var(--brand-red)]/20 transition-colors"
-              aria-label={t("searchPlaceholder")}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+      <div
+        className={`border-b border-[var(--brand-border)] ${
+          collapsed ? "px-2 py-4" : "px-4 py-6"
+        }`}
+      >
+        <Link
+          href="/dashboard"
+          onClick={closeMobile}
+          className="mx-auto flex w-full max-w-full items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-red)]"
+        >
+          <Image
+            src="/logo.png"
+            alt="BazarCo"
+            width={collapsed ? 56 : 240}
+            height={collapsed ? 56 : 80}
+            className={
+              collapsed
+                ? "h-12 w-12 object-contain"
+                : "h-[4.25rem] w-auto max-w-[13.5rem] object-contain object-center sm:h-[4.75rem] sm:max-w-[14.5rem]"
+            }
+            priority
+          />
+        </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3 scrollbar-hide">
@@ -176,23 +169,27 @@ export function SellerDashboardLayout({ children }: { children: React.ReactNode 
         })}
       </nav>
 
-      <div className="border-t border-[var(--brand-border)] px-2 py-3">
+      <div className="relative z-10 min-w-0 shrink-0 border-t border-[var(--brand-border)] px-2 py-3">
         <Link
           href="/dashboard/products/new"
           onClick={closeMobile}
           title={collapsed ? t("addProduct") : undefined}
-          className={`clay-btn-red flex items-center justify-center gap-2 py-2.5 text-sm no-underline ${
-            collapsed ? "px-2" : "w-full"
+          className={`clay-btn-red box-border flex max-w-full items-center justify-center gap-2 py-2.5 text-sm no-underline ${
+            collapsed ? "px-2" : "w-full min-w-0 px-3"
           }`}
         >
           <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
-          {!collapsed && t("addProduct")}
+          {!collapsed && <span className="truncate">{t("addProduct")}</span>}
         </Link>
         {!collapsed && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 px-0.5">
-            <LocaleSwitcher />
-            <ThemeSwitcher />
-            <CurrencySwitcher />
+          <div className="mt-3 min-w-0 space-y-2">
+            <div className="min-w-0">
+              <LocaleSwitcher menuPlacement="top" alignMenu="start" className="w-full" />
+            </div>
+            <div className="flex min-w-0 items-center justify-between gap-1.5">
+              <ThemeSwitcher menuPlacement="top" alignMenu="start" />
+              <CurrencySwitcher compact menuPlacement="top" alignMenu="end" />
+            </div>
           </div>
         )}
         <button
@@ -222,14 +219,16 @@ export function SellerDashboardLayout({ children }: { children: React.ReactNode 
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[var(--brand-border)] bg-[var(--card-bg)] shadow-lg transition-[width,transform] duration-300 ease-out ${sidebarClass} ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col overflow-x-hidden border-r border-[var(--brand-border)] bg-[var(--card-bg)] shadow-lg transition-[width,transform] duration-300 ease-out ${sidebarClass} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {sidebarInner}
       </aside>
 
-      <div className={`flex min-h-screen flex-1 flex-col transition-[padding] duration-300 ${mainPl} pl-0`}>
+      <div
+        className={`relative z-0 flex min-h-screen min-w-0 w-full flex-1 flex-col transition-[padding] duration-300 ${mainPl} max-lg:pl-0`}
+      >
         <header className="sticky top-0 z-20 border-b border-[var(--brand-border)] bg-[var(--card-bg)]/90 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--card-bg)]/80">
           <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
             <SellerMenuButton open={mobileOpen} onClick={toggleMenu} label={menuLabel} />
@@ -251,25 +250,17 @@ export function SellerDashboardLayout({ children }: { children: React.ReactNode 
                 />
               </label>
             </div>
-            <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-              <span className="hidden items-center gap-1.5 rounded-full border border-[var(--brand-border)] bg-[var(--input-bg)] px-2.5 py-1 text-xs font-medium text-[var(--brand-muted)] sm:inline-flex">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-50" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                {t("liveMarket")}
-              </span>
-              <span className="truncate text-sm font-medium text-[var(--foreground)] max-w-[100px] sm:max-w-[200px]">
+            <div className="ml-auto flex min-w-0 items-center">
+              <span className="truncate text-sm font-medium text-[var(--foreground)] max-w-[140px] sm:max-w-[240px]">
                 {user?.name || user?.email}
               </span>
-              <span className="clay-badge-red shrink-0">{t("seller")}</span>
             </div>
           </div>
           <div className="border-t border-[var(--brand-border)]/60 bg-[var(--input-bg)]/30 px-4 py-2.5 sm:px-6">
             <SellerDashboardBreadcrumb />
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 max-w-full flex-1 overflow-x-hidden p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

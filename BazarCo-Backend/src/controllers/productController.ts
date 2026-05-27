@@ -18,6 +18,8 @@ import {
   deleteProductFromAlgolia,
   searchProducts,
 } from "../services/algolia.service";
+import { isSellerKycVerified } from "../lib/sellerKyc";
+import type { ProductStatus } from "../models/product.model";
 
 type AuthUser = { id: string; role: string };
 type ReqWithUser = Request & { user?: AuthUser };
@@ -68,9 +70,11 @@ export async function listProducts(req: ReqWithUser, res: Response): Promise<voi
     errorResponse(res, 401, "Authentication required");
     return;
   }
-  const status = typeof req.query.status === "string" && (req.query.status === "active" || req.query.status === "archived")
-    ? req.query.status
-    : undefined;
+  const status =
+    typeof req.query.status === "string" &&
+    (req.query.status === "active" || req.query.status === "archived" || req.query.status === "draft")
+      ? (req.query.status as ProductStatus)
+      : undefined;
   const products = await productRepo.findBySellerId(user.id, status ? { status } : undefined);
   const categoryIds = [
     ...new Set(
@@ -98,19 +102,6 @@ export async function createProduct(req: ReqWithUser, res: Response): Promise<vo
   if (!user) {
     errorResponse(res, 401, "Authentication required");
     return;
-  }
-
-  if (user.role === "seller") {
-    const dbUser = await userRepo.findById(user.id);
-    const kycVerified = (dbUser as { kycVerified?: boolean })?.kycVerified;
-    if (!kycVerified) {
-      errorResponse(
-        res,
-        403,
-        "KYC verification required before adding products. Please upload your national card or company card in the KYC section and wait for admin verification."
-      );
-      return;
-    }
   }
 
   const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
@@ -173,6 +164,15 @@ if (isShopifyConfigured()) {
   }
 }
 
+  const wantsPublish =
+    req.body.publish === true ||
+    req.body.publish === "true" ||
+    req.body.publish === "1";
+  const kycVerified = user.role === "seller" ? await isSellerKycVerified(user.id) : true;
+  let status: ProductStatus = "draft";
+  if (kycVerified && wantsPublish) status = "active";
+  else if (req.body.status === "archived") status = "archived";
+
 const product = await productRepo.createProduct({
   name,
   description: description || undefined,
@@ -186,6 +186,7 @@ const product = await productRepo.createProduct({
   shopifyProductId,
   shopifyVariantId,
   sellerId: user.id,
+  status,
 });
 
   const productDoc = product as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId };
@@ -205,8 +206,17 @@ const product = await productRepo.createProduct({
     });
   }
 
-  successResponse(res, 201, "Product created", {
+  const message =
+    status === "draft" && wantsPublish && !kycVerified
+      ? "Product saved as draft. Complete KYC verification to publish it publicly."
+      : status === "draft"
+        ? "Product saved as draft"
+        : "Product published";
+
+  successResponse(res, 201, message, {
     product: toProductDto(productDoc, { category: categoryName, tags: tagNames.length ? tagNames : undefined }),
+    kycVerified,
+    published: status === "active",
   });
 }
 
@@ -343,9 +353,23 @@ export async function archiveProduct(req: ReqWithUser, res: Response): Promise<v
 }
 
 export async function unarchiveProduct(req: ReqWithUser, res: Response): Promise<void> {
+  await publishProduct(req, res);
+}
+
+export async function publishProduct(req: ReqWithUser, res: Response): Promise<void> {
   const user = req.user;
   if (!user) {
     errorResponse(res, 401, "Authentication required");
+    return;
+  }
+
+  const kycVerified = await isSellerKycVerified(user.id);
+  if (!kycVerified) {
+    errorResponse(
+      res,
+      403,
+      "Complete KYC verification before publishing products. Your listing stays in draft until verified."
+    );
     return;
   }
 
@@ -357,7 +381,7 @@ export async function unarchiveProduct(req: ReqWithUser, res: Response): Promise
   if (isAlgoliaConfigured()) {
     await updateProductInAlgolia(req.params.id, { status: "active" });
   }
-  successResponse(res, 200, "Product unarchived", {
+  successResponse(res, 200, "Product published", {
     product: toProductDto(product as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId }),
   });
 }
@@ -488,7 +512,8 @@ export async function getProductById(req: ReqWithUser, res: Response): Promise<v
     return;
   }
   const doc = product as Record<string, unknown> & { _id: Types.ObjectId; sellerId: Types.ObjectId; status: string };
-  if (doc.status !== "active") {
+  const isOwner = userId && doc.sellerId.toString() === userId;
+  if (doc.status !== "active" && !isOwner) {
     errorResponse(res, 404, "Product not found");
     return;
   }

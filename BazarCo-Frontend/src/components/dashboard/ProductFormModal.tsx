@@ -133,14 +133,14 @@ export function ProductFormModal({
       image: imageFile ?? undefined,
     };
     if (mode === "add") {
-      const created = await productCreate(payload);
+      const { product: created, message } = await productCreate(payload, { publish: true });
       setSubmitting(false);
       if (created) {
-        toast.success("Product added.");
+        toast.success(message ?? "Product added.");
         onSuccess();
       } else {
-        setError("Failed to create product. Try again.");
-        toast.error("Failed to create product.");
+        setError(message ?? "Failed to create product. Try again.");
+        toast.error(message ?? "Failed to create product.");
       }
     } else if (product) {
       const updated = await productUpdate(product.id, { ...payload, tagIds });

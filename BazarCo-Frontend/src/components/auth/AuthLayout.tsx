@@ -2,23 +2,40 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+const cardSpring = { type: "spring" as const, stiffness: 280, damping: 28 };
 
 export function AuthLayout({
   children,
   title,
   subtitle,
   variant = "default",
+  showOverlay = false,
 }: {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
   /** Wide card for long-form content (e.g. seller agreement). */
   variant?: "default" | "wide";
+  /** Dim background when seller agreement panel is open. */
+  showOverlay?: boolean;
 }) {
   const isWide = variant === "wide";
   return (
     <div className="clay-hero-bg relative flex min-h-screen flex-col overflow-hidden">
+      <AnimatePresence>
+        {showOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="pointer-events-none fixed inset-0 z-[55] bg-[var(--foreground)]/10"
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
       <div
         className="pointer-events-none absolute -right-[8%] -top-[10%] h-80 w-80 rounded-full blur-3xl"
         style={{ background: "rgba(21, 101, 192, 0.06)" }}
@@ -50,7 +67,12 @@ export function AuthLayout({
       >
         <motion.div
           initial={{ opacity: 0, y: 18, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            scale: showOverlay ? 0.96 : 1,
+            x: showOverlay ? -12 : 0,
+          }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className={`clay-card w-full ${
             isWide

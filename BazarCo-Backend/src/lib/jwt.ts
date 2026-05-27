@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
-import type { JwtPayload } from "../interfaces/auth";
+import type { AdminJwtPayload, JwtPayload } from "../interfaces/auth";
 
 const SEVEN_DAYS_SEC = 7 * 24 * 60 * 60;
 
@@ -16,9 +16,13 @@ export function signToken(payload: JwtPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: parseExpiresIn() });
 }
 
-export function verifyToken(token: string): JwtPayload | null {
+export function signAdminToken(payload: AdminJwtPayload): string {
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: parseExpiresIn() });
+}
+
+export function verifyToken(token: string): JwtPayload | AdminJwtPayload | null {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload | AdminJwtPayload;
     return decoded;
   } catch {
     return null;

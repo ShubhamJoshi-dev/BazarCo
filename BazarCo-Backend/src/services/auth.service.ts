@@ -15,7 +15,8 @@ export async function signup(email: string, password: string, name?: string, rol
   }
   const hashed = await bcrypt.hash(password, SALT_ROUNDS);
   const user = await userRepo.createUser({ email, password: hashed, name, role });
-  const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
+  const tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+  const payload: JwtPayload = { userId: user._id.toString(), email: user.email, tokenVersion };
   const token = signToken(payload);
   const savedRole = (user as { role?: string }).role ?? "buyer";
   const rating = (user as { rating?: number }).rating ?? 0;
@@ -36,7 +37,8 @@ export async function login(email: string, password: string) {
   if (!match) {
     return { success: false, reason: "invalid_credentials" as const };
   }
-  const payload: JwtPayload = { userId: user._id.toString(), email: user.email };
+  const tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+  const payload: JwtPayload = { userId: user._id.toString(), email: user.email, tokenVersion };
   const token = signToken(payload);
   const role = (user as { role?: string }).role ?? "buyer";
   const rating = (user as { rating?: number }).rating ?? 0;

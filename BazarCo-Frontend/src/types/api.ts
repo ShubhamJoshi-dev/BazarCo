@@ -43,7 +43,7 @@ export interface AuthErrorResponse {
 
 export type AuthResponse = AuthSuccessResponse | AuthErrorResponse;
 
-export type ProductStatus = "active" | "archived";
+export type ProductStatus = "draft" | "active" | "archived";
 
 export interface Category {
   id: string;

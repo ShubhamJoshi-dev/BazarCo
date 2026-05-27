@@ -7,6 +7,7 @@ import * as videoRepo from "../repositories/sellerVideo.repository";
 import { uploadVideo, isCloudinaryConfigured } from "../services/cloudinary.service";
 import { saveVideoLocally } from "../helpers/videoStorage.helper";
 import type { SellerVideoStatus } from "../models/sellerVideo.model";
+import { isSellerKycVerified } from "../lib/sellerKyc";
 
 function toDto(doc: Record<string, unknown> & { _id: Types.ObjectId }) {
   return {
@@ -154,7 +155,17 @@ export async function patchVideo(req: ReqWithUser, res: Response): Promise<void>
   const patch: Record<string, unknown> = {};
   if (typeof body.title === "string") patch.title = body.title.trim().slice(0, 200);
   if (typeof body.caption === "string") patch.caption = body.caption.slice(0, 2000);
-  if (typeof body.status === "string") patch.status = body.status;
+  if (typeof body.status === "string") {
+    const next = body.status as SellerVideoStatus;
+    if (next === "live" || next === "categorized") {
+      const kycVerified = await isSellerKycVerified(user.id);
+      if (!kycVerified) {
+        errorResponse(res, 403, "Complete KYC verification before making videos public.");
+        return;
+      }
+    }
+    patch.status = next;
+  }
   if (typeof body.visibility === "string") patch.visibility = body.visibility;
   if (typeof body.category === "string") patch.category = body.category.slice(0, 120);
   if (Array.isArray(body.linkedProductIds)) {
@@ -181,6 +192,17 @@ export async function publishVideo(req: ReqWithUser, res: Response): Promise<voi
     errorResponse(res, 401, "Authentication required");
     return;
   }
+
+  const kycVerified = await isSellerKycVerified(user.id);
+  if (!kycVerified) {
+    errorResponse(
+      res,
+      403,
+      "Complete KYC verification before publishing videos. Your video stays in draft until verified."
+    );
+    return;
+  }
+
   const body = req.body as Record<string, unknown>;
   const patch: Record<string, unknown> = {
     status: "live",

@@ -21,4 +21,18 @@ export interface AuthResetPasswordBody {
 export interface JwtPayload {
   userId: string;
   email: string;
+  tokenVersion?: number;
+}
+
+export interface AdminJwtPayload {
+  adminId: string;
+  email: string;
+  username: string;
+  role: string;
+  scope: "admin";
+  tokenVersion?: number;
+}
+
+export function isAdminJwtPayload(payload: JwtPayload | AdminJwtPayload): payload is AdminJwtPayload {
+  return (payload as AdminJwtPayload).scope === "admin";
 }

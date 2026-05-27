@@ -12,6 +12,7 @@ import {
   ImageIcon,
   Pencil,
   Plus,
+  Rocket,
   Trash2,
   TrendingUp,
   Upload,
@@ -21,8 +22,11 @@ import {
   categoriesList,
   getKycStatus,
   productDelete,
+  productPublish,
   productsList,
+  type KycStatusResponse,
 } from "@/lib/api";
+import { SellerKycPublishBanner } from "@/components/dashboard/SellerKycPublishBanner";
 import {
   displayMarginPercent,
   formatRelativeUpdated,
@@ -36,7 +40,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 
 const PAGE_SIZE = 10;
 
-type StatusFilter = "all" | "active" | "archived" | StockLevel;
+type StatusFilter = "all" | "active" | "archived" | "draft" | StockLevel;
 
 const STOCK_PILL: Record<
   StockLevel,
@@ -88,6 +92,8 @@ export function SellerInventoryView() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [kycVerified, setKycVerified] = useState<boolean | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatusResponse["status"] | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkHint, setBulkHint] = useState(false);
 
@@ -100,7 +106,10 @@ export function SellerInventoryView() {
 
   useEffect(() => {
     load();
-    getKycStatus().then((k) => setKycVerified(k?.kycVerified ?? false));
+    getKycStatus().then((k) => {
+      setKycVerified(k?.kycVerified ?? false);
+      setKycStatus(k?.status ?? "pending");
+    });
     categoriesList().then(setCategories);
   }, [load]);
 
@@ -118,6 +127,7 @@ export function SellerInventoryView() {
       if (brandFilter && (p.brand ?? "") !== brandFilter) return false;
       if (statusFilter === "active" && p.status !== "active") return false;
       if (statusFilter === "archived" && p.status !== "archived") return false;
+      if (statusFilter === "draft" && p.status !== "draft") return false;
       if (statusFilter === "in_stock" || statusFilter === "low_stock" || statusFilter === "out_of_stock") {
         if (getStockLevel(p) !== statusFilter) return false;
       }
@@ -127,16 +137,34 @@ export function SellerInventoryView() {
 
   const kpis = useMemo(() => {
     const active = products.filter((p) => p.status === "active");
+    const drafts = products.filter((p) => p.status === "draft").length;
     const lowStock = active.filter((p) => getStockLevel(p) === "low_stock").length;
     const outOfStock = products.filter((p) => getStockLevel(p) === "out_of_stock").length;
     const stockValue = active.reduce((s, p) => s + Number(p.price) * (p.stock ?? 0), 0);
     return {
       total: products.length,
+      drafts,
       lowStock,
       stockValue,
       outOfStock,
     };
   }, [products]);
+
+  const handlePublish = async (product: Product) => {
+    if (!kycVerified) {
+      toast.error(t("publishFailed"));
+      return;
+    }
+    setPublishingId(product.id);
+    const { product: published, message } = await productPublish(product.id);
+    setPublishingId(null);
+    if (published) {
+      toast.success(t("publishedToast"));
+      load();
+    } else {
+      toast.error(message ?? t("publishFailed"));
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -177,14 +205,7 @@ export function SellerInventoryView() {
 
   return (
     <div className="space-y-6 w-full pb-8">
-      {kycVerified === false && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-amber-900">{t("kycRequired")}</p>
-          <Link href="/dashboard/kyc" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white">
-            {t("goKyc")}
-          </Link>
-        </div>
-      )}
+      <SellerKycPublishBanner kycVerified={kycVerified} kycStatus={kycStatus} />
 
       {bulkHint && (
         <p className="text-sm text-[var(--brand-blue)] bg-blue-50 border border-blue-100 rounded-lg px-4 py-2">
@@ -216,10 +237,7 @@ export function SellerInventoryView() {
           </button>
           <Link
             href="/dashboard/products/new"
-            aria-disabled={kycVerified === false}
-            className={`inline-flex items-center gap-2 rounded-lg bg-[var(--brand-red)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b71c1c] transition-colors ${
-              kycVerified === false ? "pointer-events-none opacity-50" : ""
-            }`}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-red)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b71c1c] transition-colors"
           >
             <Plus className="h-4 w-4" />
             {t("addProduct")}
@@ -227,9 +245,15 @@ export function SellerInventoryView() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {[
           { label: t("kpiTotal"), value: kpis.total.toLocaleString(), icon: ClipboardList, iconBg: "bg-blue-100 text-blue-600" },
+          {
+            label: t("statusDraftShort"),
+            value: t("draftCount", { count: kpis.drafts }),
+            icon: Clock,
+            iconBg: "bg-amber-100 text-amber-700",
+          },
           { label: t("kpiLowStock"), value: `${kpis.lowStock} ${t("items")}`, icon: AlertTriangle, iconBg: "bg-red-100 text-red-600" },
           {
             label: t("kpiStockValue"),
@@ -288,6 +312,7 @@ export function SellerInventoryView() {
             >
               <option value="all">{t("statusAll")}</option>
               <option value="active">{t("statusActive")}</option>
+              <option value="draft">{t("statusDraft")}</option>
               <option value="archived">{t("statusArchived")}</option>
               <option value="in_stock">{t("stockIn")}</option>
               <option value="low_stock">{t("stockLow")}</option>
@@ -339,6 +364,7 @@ export function SellerInventoryView() {
                 </tr>
               ) : (
                 paginated.map((p) => {
+                  const isDraft = p.status === "draft";
                   const level = getStockLevel(p);
                   const pill = STOCK_PILL[level];
                   const stock = p.stock ?? 0;
@@ -364,7 +390,14 @@ export function SellerInventoryView() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-[var(--foreground)] truncate">{p.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-[var(--foreground)] truncate">{p.name}</p>
+                              {isDraft && (
+                                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                                  {t("statusDraftShort")}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-neutral-500 truncate">{p.category ?? t("uncategorized")}</p>
                           </div>
                         </div>
@@ -379,18 +412,36 @@ export function SellerInventoryView() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${pill.className}`}
-                        >
-                          {t(pill.labelKey)}
-                          {level !== "out_of_stock" && ` (${stock})`}
-                        </span>
+                        {isDraft ? (
+                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                            {t("statusDraft")}
+                          </span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${pill.className}`}
+                          >
+                            {t(pill.labelKey)}
+                            {level !== "out_of_stock" && ` (${stock})`}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-neutral-500 whitespace-nowrap text-xs">
                         {formatRelativeUpdated(p.updatedAt ?? p.createdAt)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
+                          {isDraft && (
+                            <button
+                              type="button"
+                              disabled={!kycVerified || publishingId === p.id}
+                              onClick={() => handlePublish(p)}
+                              title={kycVerified ? t("publish") : t("publishFailed")}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Rocket className="h-3.5 w-3.5" />
+                              {t("publish")}
+                            </button>
+                          )}
                           <Link
                             href={`/dashboard/products/${p.id}/edit`}
                             className="p-2 rounded-lg text-neutral-500 hover:bg-[var(--input-bg)] hover:text-[var(--brand-blue)]"

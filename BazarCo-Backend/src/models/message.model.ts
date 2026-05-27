@@ -16,9 +16,15 @@ const messageSchema = new mongoose.Schema(
     messageType: { type: String, enum: ["text", "image", "file"], default: "text" },
     status: { type: String, enum: ["sent", "delivered", "seen"], default: "sent" },
     isUnsent: { type: Boolean, default: false },
+    flagged: { type: Boolean, default: false },
+    adminDeleted: { type: Boolean, default: false },
+    moderationNote: { type: String, trim: true, maxlength: 500 },
   },
   { timestamps: true, collection: "messages" }
 );
+
+messageSchema.index({ flagged: 1 });
+messageSchema.index({ adminDeleted: 1 });
 
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ conversationId: 1, messageId: 1 }, { unique: true });

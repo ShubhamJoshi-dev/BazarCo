@@ -1,19 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Store, ArrowRight, ArrowLeft, Check, FileText } from "lucide-react";
+import { ShoppingBag, Store, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { authSignup } from "@/lib/api";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { RedirectIfAuthed } from "@/components/auth/RedirectIfAuthed";
-import { SellerAgreementDocument } from "@/components/auth/SellerAgreementDocument";
+import { SellerSignupSlidePanel } from "@/components/auth/SellerSignupSlidePanel";
+import { SignupStepPanel } from "@/components/auth/SignupStepPanel";
 
 type Role = "buyer" | "seller";
-type Step = "role" | "agreement" | "details";
+type Step = "role" | "details";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function SignupPage() {
 
   const [step, setStep] = useState<Step>("role");
   const [role, setRole] = useState<Role | null>(null);
+  const [sellerPanelOpen, setSellerPanelOpen] = useState(false);
   const [agreedToSellerTerms, setAgreedToSellerTerms] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,12 +37,36 @@ export default function SignupPage() {
     { id: "seller", icon: Store, titleKey: "sellerTitle", descKey: "sellerDesc", color: "red" },
   ];
 
+  const openSellerPanel = useCallback(() => {
+    setRole("seller");
+    setError("");
+    setSellerPanelOpen(true);
+  }, []);
+
+  const closeSellerPanel = useCallback(() => {
+    setSellerPanelOpen(false);
+    setError("");
+  }, []);
+
+  function handleRoleSelect(id: Role) {
+    setRole(id);
+    setError("");
+    if (id === "buyer") {
+      closeSellerPanel();
+      if (step === "details") setStep("role");
+    }
+  }
+
   function handleRoleContinue() {
     if (!role) return;
     setError("");
     if (role === "seller") {
-      setAgreedToSellerTerms(false);
-      setStep("agreement");
+      if (agreedToSellerTerms) {
+        setSellerPanelOpen(false);
+        setStep("details");
+      } else {
+        openSellerPanel();
+      }
     } else {
       setStep("details");
     }
@@ -52,7 +78,17 @@ export default function SignupPage() {
       return;
     }
     setError("");
+    setSellerPanelOpen(false);
     setStep("details");
+  }
+
+  function handleDetailsBack() {
+    setError("");
+    if (role === "seller" && agreedToSellerTerms) {
+      setStep("role");
+      return;
+    }
+    setStep("role");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -109,37 +145,33 @@ export default function SignupPage() {
     { label: "match", ok: confirmPassword.length > 0 && password === confirmPassword },
   ];
 
-  const isAgreementStep = step === "agreement";
+  const isSeller = role === "seller";
+  const isBuyer = role === "buyer";
 
   return (
     <RedirectIfAuthed>
       <AuthLayout
-        variant={isAgreementStep ? "wide" : "default"}
-        title={isAgreementStep ? t("sellerAgreementTitle") : t("signUpTitle")}
-        subtitle={isAgreementStep ? t("sellerAgreementSubtitle") : t("signUpSubtitle")}
+        title={t("signUpTitle")}
+        subtitle={t("signUpSubtitle")}
+        showOverlay={sellerPanelOpen}
       >
         <AnimatePresence mode="wait">
           {step === "role" && (
-            <motion.div
-              key="role"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.28 }}
-              className="space-y-4"
-            >
-              <p className="text-sm font-semibold text-[var(--brand-muted)] text-center mb-5">
+            <SignupStepPanel stepKey="role" className="space-y-4">
+              <p className="mb-5 text-center text-sm font-semibold text-[var(--brand-muted)]">
                 {t("howWillYouUse")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {ROLES.map(({ id, icon: Icon, titleKey, descKey, color }) => {
                   const selected = role === id;
                   return (
-                    <button
+                    <motion.button
                       key={id}
                       type="button"
-                      onClick={() => setRole(id)}
-                      className={`relative flex flex-col items-center gap-3 p-5 rounded-3xl text-left transition-all border-2 ${
+                      onClick={() => handleRoleSelect(id)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`relative flex flex-col items-center gap-3 rounded-3xl border-2 p-5 text-left transition-colors ${
                         selected
                           ? color === "blue"
                             ? "border-[var(--brand-blue)] bg-[var(--brand-blue)]/10"
@@ -148,13 +180,15 @@ export default function SignupPage() {
                       }`}
                     >
                       {selected && (
-                        <span
-                          className={`absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full ${
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className={`absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full ${
                             color === "blue" ? "bg-[var(--brand-blue)]" : "bg-[var(--brand-red)]"
                           }`}
                         >
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </span>
+                          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                        </motion.span>
                       )}
                       <span
                         className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
@@ -165,134 +199,70 @@ export default function SignupPage() {
                             : "bg-[var(--brand-muted)]/15 text-[var(--brand-muted)]"
                         }`}
                       >
-                        <Icon className="w-6 h-6" strokeWidth={1.8} />
+                        <Icon className="h-6 w-6" strokeWidth={1.8} />
                       </span>
                       <div>
-                        <p className={`font-bold text-sm ${selected ? "text-[var(--foreground)]" : "text-[var(--brand-muted)]"}`}>
+                        <p
+                          className={`text-sm font-bold ${selected ? "text-[var(--foreground)]" : "text-[var(--brand-muted)]"}`}
+                        >
                           {t(titleKey)}
                         </p>
-                        <p className="text-[11px] text-[var(--brand-muted)] leading-snug mt-0.5">{t(descKey)}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-[var(--brand-muted)]">
+                          {t(descKey)}
+                        </p>
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
+              {role === "seller" && !sellerPanelOpen && step === "role" && (
+                <p className="text-center text-xs font-medium text-[var(--brand-red)]">
+                  {agreedToSellerTerms ? t("sellerReadyToCreate") : t("sellerContinueHint")}
+                </p>
+              )}
               <button
                 type="button"
                 disabled={!role}
                 onClick={handleRoleContinue}
-                className={`${role === "seller" ? "clay-btn-red" : "clay-btn-blue"} w-full py-3.5 text-base flex items-center justify-center gap-2 mt-2 disabled:opacity-40`}
+                className={`${isSeller ? "clay-btn-red" : "clay-btn-blue"} mt-2 flex w-full items-center justify-center gap-2 py-3.5 text-base disabled:opacity-40`}
               >
-                {t("continue")} <ArrowRight className="w-4 h-4" />
+                {t("continue")} <ArrowRight className="h-4 w-4" />
               </button>
-              <p className="text-center text-sm text-[var(--brand-muted)] pt-1">
+              <p className="pt-1 text-center text-sm text-[var(--brand-muted)]">
                 {t("alreadyHaveAccount")}{" "}
-                <Link href="/login" className="text-[var(--brand-blue)] font-semibold hover:underline">
+                <Link href="/login" className="font-semibold text-[var(--brand-blue)] hover:underline">
                   {t("signIn")}
                 </Link>
               </p>
-            </motion.div>
+            </SignupStepPanel>
           )}
 
-          {step === "agreement" && (
-            <motion.div
-              key="agreement"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.28 }}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="clay-badge-red inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold">
-                  <FileText className="h-4 w-4" />
-                  {t("sellerAgreementStep")}
-                </span>
-                <span className="text-xs font-medium text-[var(--brand-muted)]">
-                  {t("sellerAgreementScrollHint")}
-                </span>
-              </div>
-
-              {error && (
-                <div className="mb-4 rounded-2xl border border-[var(--brand-red)]/35 bg-[var(--brand-red)]/12 px-4 py-3 text-sm text-[var(--brand-red)]">
-                  {error}
-                </div>
-              )}
-
-              <div className="min-h-[min(50vh,520px)] flex-1 overflow-y-auto rounded-2xl border border-[var(--brand-border)] bg-gradient-to-b from-neutral-50 to-white p-5 shadow-inner sm:min-h-[min(58vh,580px)] sm:p-6 lg:p-8 scrollbar-hide">
-                <SellerAgreementDocument />
-              </div>
-
-              <div className="mt-5 shrink-0 space-y-4 border-t border-[var(--brand-border)] pt-5">
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--brand-border)] bg-white/80 p-4 text-left transition-colors hover:border-[var(--brand-red)]/30">
-                <input
-                  type="checkbox"
-                  checked={agreedToSellerTerms}
-                  onChange={(e) => {
-                    setAgreedToSellerTerms(e.target.checked);
-                    if (e.target.checked) setError("");
-                  }}
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 text-[var(--brand-red)] focus:ring-[var(--brand-red)]"
-                />
-                <span className="text-sm leading-relaxed text-[var(--foreground)]">{t("agreeLabel")}</span>
-              </label>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError("");
-                    setStep("role");
-                  }}
-                  className="flex-1 rounded-2xl border border-[var(--brand-border)] py-3.5 text-sm font-semibold hover:bg-neutral-50"
-                >
-                  {t("back")}
-                </button>
-                <button
-                  type="button"
-                  disabled={!agreedToSellerTerms}
-                  onClick={handleAgreementContinue}
-                  className="clay-btn-red flex flex-[2] items-center justify-center gap-2 py-3.5 text-sm disabled:opacity-40 sm:text-base"
-                >
-                  {t("continue")} <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              </div>
-            </motion.div>
-          )}
-
-          {step === "details" && (
-            <motion.div
-              key="details"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.28 }}
-            >
+          {step === "details" && role && (
+            <SignupStepPanel stepKey={`${role}-details`}>
               <div
-                className={`flex items-center gap-2 mb-5 ${role === "seller" ? "clay-badge-red" : "clay-badge-blue"}`}
-                style={{ display: "inline-flex", borderRadius: 999, padding: "6px 12px" }}
+                className={`mb-5 inline-flex items-center gap-2 ${isSeller ? "clay-badge-red" : "clay-badge-blue"}`}
+                style={{ borderRadius: 999, padding: "6px 12px" }}
               >
-                {role === "seller" ? <Store className="w-3.5 h-3.5" /> : <ShoppingBag className="w-3.5 h-3.5" />}
+                {isSeller ? <Store className="h-3.5 w-3.5" /> : <ShoppingBag className="h-3.5 w-3.5" />}
                 <span className="text-xs font-bold capitalize">{role} account</span>
                 <button
                   type="button"
-                  onClick={() => setStep(role === "seller" ? "agreement" : "role")}
+                  onClick={handleDetailsBack}
                   className="ml-1 opacity-60 hover:opacity-100"
                   aria-label={t("back")}
                 >
-                  <ArrowLeft className="w-3 h-3" />
+                  <ArrowLeft className="h-3 w-3" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <div className="rounded-2xl bg-[var(--brand-red)]/12 border border-[var(--brand-red)]/35 px-4 py-3 text-sm text-[var(--brand-red)]">
+                  <div className="rounded-2xl border border-[var(--brand-red)]/35 bg-[var(--brand-red)]/12 px-4 py-3 text-sm text-[var(--brand-red)]">
                     {error}
                   </div>
                 )}
                 <div>
-                  <label htmlFor="signup-name" className="block text-sm font-semibold mb-2">
+                  <label htmlFor="signup-name" className="mb-2 block text-sm font-semibold">
                     {t("fullName")}
                   </label>
                   <input
@@ -307,7 +277,7 @@ export default function SignupPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="signup-email" className="block text-sm font-semibold mb-2">
+                  <label htmlFor="signup-email" className="mb-2 block text-sm font-semibold">
                     {t("email")}
                   </label>
                   <input
@@ -321,7 +291,7 @@ export default function SignupPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="signup-password" className="block text-sm font-semibold mb-2">
+                  <label htmlFor="signup-password" className="mb-2 block text-sm font-semibold">
                     {t("password")}
                   </label>
                   <input
@@ -335,7 +305,7 @@ export default function SignupPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="signup-confirm" className="block text-sm font-semibold mb-2">
+                  <label htmlFor="signup-confirm" className="mb-2 block text-sm font-semibold">
                     {t("confirmPassword")}
                   </label>
                   <input
@@ -349,14 +319,14 @@ export default function SignupPage() {
                   />
                 </div>
                 {password.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap">
+                  <div className="flex flex-wrap gap-1.5">
                     {pwdChecks.map(({ label, ok }) => (
                       <span
                         key={label}
-                        className={`text-[11px] px-2.5 py-1 rounded-full font-semibold border ${
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                           ok
-                            ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-600"
-                            : "bg-neutral-100 border-neutral-200 text-[var(--brand-muted)]"
+                            ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-600"
+                            : "border-neutral-200 bg-neutral-100 text-[var(--brand-muted)]"
                         }`}
                       >
                         {ok ? "✓ " : ""}
@@ -368,21 +338,33 @@ export default function SignupPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`${role === "seller" ? "clay-btn-red" : "clay-btn-blue"} w-full py-3.5 text-base disabled:opacity-60`}
+                  className={`${isSeller ? "clay-btn-red" : "clay-btn-blue"} w-full py-3.5 text-base disabled:opacity-60`}
                 >
                   {loading ? t("creatingAccount") : t("createAccount")}
                 </button>
               </form>
               <p className="mt-5 text-center text-sm text-[var(--brand-muted)]">
                 {t("alreadyHaveAccount")}{" "}
-                <Link href="/login" className="text-[var(--brand-blue)] font-semibold hover:underline">
+                <Link href="/login" className="font-semibold text-[var(--brand-blue)] hover:underline">
                   {t("signIn")}
                 </Link>
               </p>
-            </motion.div>
+            </SignupStepPanel>
           )}
         </AnimatePresence>
       </AuthLayout>
+
+      <SellerSignupSlidePanel
+        open={sellerPanelOpen}
+        onClose={closeSellerPanel}
+        agreedToSellerTerms={agreedToSellerTerms}
+        onAgreedChange={(v) => {
+          setAgreedToSellerTerms(v);
+          if (v) setError("");
+        }}
+        onAgreementContinue={handleAgreementContinue}
+        error={sellerPanelOpen ? error : ""}
+      />
     </RedirectIfAuthed>
   );
 }

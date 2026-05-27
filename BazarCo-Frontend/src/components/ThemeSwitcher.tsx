@@ -7,7 +7,13 @@ import { useTranslations } from "next-intl";
 
 type ThemeOption = "light" | "dark" | "system";
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({
+  menuPlacement = "bottom",
+  alignMenu = "start",
+}: {
+  menuPlacement?: "top" | "bottom";
+  alignMenu?: "start" | "end";
+}) {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -36,7 +42,15 @@ export function ThemeSwitcher() {
       </button>
       {open && (
         <ul
-          className="absolute right-0 top-full mt-1 min-w-[120px] rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] py-1 shadow-lg z-50"
+          className={`absolute z-[60] min-w-[120px] rounded-lg border border-[var(--brand-border)] bg-[var(--card-bg)] py-1 shadow-lg ${
+            menuPlacement === "top"
+              ? alignMenu === "end"
+                ? "bottom-full right-0 mb-1"
+                : "bottom-full left-0 mb-1"
+              : alignMenu === "end"
+                ? "right-0 top-full mt-1"
+                : "left-0 top-full mt-1"
+          }`}
           role="listbox"
         >
           {(["light", "dark", "system"] as const).map((opt) => (

@@ -15,6 +15,7 @@ import { ordersRouter } from "./orders";
 import { productsRouter } from "./products";
 import { sellerRouter } from "./seller";
 import { tagsRouter } from "./tags";
+import { adminRouter } from "../admin/routes";
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use("/orders", ordersRouter);
 router.use("/products", productsRouter);
 router.use("/seller", sellerRouter);
 router.use("/tags", tagsRouter);
+router.use("/admin", adminRouter);
 
 export default router;

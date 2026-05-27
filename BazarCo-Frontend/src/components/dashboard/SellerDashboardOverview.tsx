@@ -26,6 +26,7 @@ import {
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { sellerDashboard, type SellerDashboard } from "@/lib/api";
+import { SellerOnboardingBanner } from "@/components/dashboard/SellerOnboardingBanner";
 
 const STATUS_PILL: Record<string, { label: string; className: string }> = {
   completed: { label: "DELIVERED", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -90,6 +91,8 @@ export function SellerDashboardOverview() {
 
   return (
     <div className="space-y-6">
+      <SellerOnboardingBanner />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">

@@ -19,14 +19,16 @@ import {
 import {
   categoriesList,
   getKycStatus,
-  productUnarchive,
   getProductById,
   productArchive,
   productCreate,
+  productPublish,
   productUpdate,
   tagCreate,
   tagsList,
+  type KycStatusResponse,
 } from "@/lib/api";
+import { SellerKycPublishBanner } from "@/components/dashboard/SellerKycPublishBanner";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -90,6 +92,7 @@ export function SellerProductFormPage({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kycVerified, setKycVerified] = useState<boolean | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatusResponse["status"] | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -131,6 +134,7 @@ export function SellerProductFormPage({
     setCategories(cats);
     setTags(tagList);
     setKycVerified(kyc?.kycVerified ?? false);
+    setKycStatus(kyc?.status ?? "pending");
   }, []);
 
   useEffect(() => {
@@ -225,27 +229,25 @@ export function SellerProductFormPage({
       setError(validationError);
       return;
     }
-    if (kycVerified === false) {
-      setError(t("kycRequired"));
-      return;
-    }
-
     setSubmitting(true);
     const payload = buildPayload();
+    const wantsPublish = !asDraft && activeListing;
 
     if (mode === "create") {
-      const created = await productCreate(payload);
+      const { product: created, message, published } = await productCreate(payload, {
+        publish: wantsPublish,
+      });
+      setSubmitting(false);
       if (!created) {
-        setSubmitting(false);
-        setError(t("saveFailed"));
-        toast.error(t("saveFailed"));
+        setError(message ?? t("saveFailed"));
+        toast.error(message ?? t("saveFailed"));
         return;
       }
-      if (asDraft || !activeListing) {
-        await productArchive(created.id);
+      if (wantsPublish && !published && !kycVerified) {
+        toast.success(message ?? t("savedDraft"));
+      } else {
+        toast.success(message ?? (published ? t("published") : t("savedDraft")));
       }
-      setSubmitting(false);
-      toast.success(asDraft ? t("savedDraft") : t("published"));
       router.push("/dashboard/products");
       return;
     }
@@ -258,10 +260,26 @@ export function SellerProductFormPage({
         toast.error(t("saveFailed"));
         return;
       }
+      if (wantsPublish && updated.status === "draft") {
+        if (!kycVerified) {
+          setSubmitting(false);
+          toast.success(t("savedDraft"));
+          router.push("/dashboard/products");
+          return;
+        }
+        const pub = await productPublish(productId);
+        setSubmitting(false);
+        if (!pub.product) {
+          toast.error(pub.message ?? t("saveFailed"));
+          router.push("/dashboard/products");
+          return;
+        }
+        toast.success(t("published"));
+        router.push("/dashboard/products");
+        return;
+      }
       if (asDraft && updated.status === "active") {
         await productArchive(productId);
-      } else if (!asDraft && updated.status === "archived" && activeListing) {
-        await productUnarchive(productId);
       }
       setSubmitting(false);
       toast.success(asDraft ? t("savedDraft") : t("updated"));
@@ -290,7 +308,7 @@ export function SellerProductFormPage({
   }
 
   return (
-    <div className="w-full pb-24">
+    <div className="w-full min-w-0 max-w-full pb-24">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] tracking-tight">
@@ -322,14 +340,11 @@ export function SellerProductFormPage({
         </div>
       </div>
 
-      {kycVerified === false && (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-3">
-          <span>{t("kycRequired")}</span>
-          <Link href="/dashboard/kyc" className="font-semibold text-amber-800 hover:underline">
-            {t("goKyc")}
-          </Link>
-        </div>
-      )}
+      <SellerKycPublishBanner
+        kycVerified={kycVerified}
+        kycStatus={kycStatus}
+        className="mb-5"
+      />
 
       {error && (
         <p className="mb-5 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
@@ -337,8 +352,8 @@ export function SellerProductFormPage({
         </p>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-5">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-3">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           <FormCard icon={List} title={t("basicInfo")}>
             <div className="space-y-4">
               <div>
@@ -510,7 +525,7 @@ export function SellerProductFormPage({
           </FormCard>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <FormCard icon={ImagePlus} title={t("mediaGallery")}>
             <input
               ref={mainImageRef}

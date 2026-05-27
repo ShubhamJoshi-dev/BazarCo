@@ -336,7 +336,7 @@ export async function browseProducts(params: {
 }
 
 // Products (seller only)
-export async function productsList(status?: "active" | "archived"): Promise<Product[]> {
+export async function productsList(status?: Product["status"]): Promise<Product[]> {
   try {
     const params = status ? { status } : {};
     const { data } = await api.get<ProductListResponse>("/products", { params });
@@ -347,17 +347,20 @@ export async function productsList(status?: "active" | "archived"): Promise<Prod
   }
 }
 
-export async function productCreate(payload: {
-  name: string;
-  description?: string;
-  price: number;
-  sku?: string;
-  stock?: number;
-  brand?: string;
-  categoryId?: string;
-  tagIds?: string[];
-  image?: File;
-}): Promise<Product | null> {
+export async function productCreate(
+  payload: {
+    name: string;
+    description?: string;
+    price: number;
+    sku?: string;
+    stock?: number;
+    brand?: string;
+    categoryId?: string;
+    tagIds?: string[];
+    image?: File;
+  },
+  options?: { publish?: boolean },
+): Promise<{ product: Product | null; message?: string; published?: boolean }> {
   try {
     const form = new FormData();
     form.append("name", payload.name.trim());
@@ -369,11 +372,37 @@ export async function productCreate(payload: {
     if (payload.categoryId) form.append("categoryId", payload.categoryId);
     (payload.tagIds ?? []).forEach((id) => form.append("tagIds", id));
     if (payload.image) form.append("image", payload.image);
-    const { data } = await api.post<ProductSingleResponse>("/products", form);
-    if (data.status === "success" && data.product) return data.product;
-    return null;
-  } catch {
-    return null;
+    if (options?.publish) form.append("publish", "true");
+    const { data } = await api.post<ProductSingleResponse & { message?: string; published?: boolean }>(
+      "/products",
+      form,
+    );
+    if (data.status === "success" && data.product) {
+      return { product: data.product, message: data.message, published: data.published };
+    }
+    return { product: null };
+  } catch (err: unknown) {
+    const message =
+      err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+    return { product: null, message };
+  }
+}
+
+export async function productPublish(id: string): Promise<{ product: Product | null; message?: string }> {
+  try {
+    const { data } = await api.patch<ProductSingleResponse & { message?: string }>(`/products/${id}/publish`);
+    if (data.status === "success" && data.product) {
+      return { product: data.product, message: data.message };
+    }
+    return { product: null };
+  } catch (err: unknown) {
+    const message =
+      err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+    return { product: null, message };
   }
 }
 
@@ -1732,16 +1761,20 @@ export async function sellerVideosPublish(
     minOfferPrice: number;
     scheduledAt: string;
   }>,
-): Promise<SellerVideo | null> {
+): Promise<{ video: SellerVideo | null; message?: string }> {
   try {
-    const { data } = await api.post<{ status: string; video?: SellerVideo }>(
+    const { data } = await api.post<{ status: string; video?: SellerVideo; message?: string }>(
       `/seller/videos/${id}/publish`,
       payload,
     );
-    if (data.status === "success" && data.video) return data.video;
-    return null;
-  } catch {
-    return null;
+    if (data.status === "success" && data.video) return { video: data.video, message: data.message };
+    return { video: null };
+  } catch (err: unknown) {
+    const message =
+      err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+    return { video: null, message };
   }
 }
 

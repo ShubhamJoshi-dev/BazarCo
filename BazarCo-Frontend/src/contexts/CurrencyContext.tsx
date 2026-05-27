@@ -27,17 +27,18 @@ export const CURRENCY_META: Record<Currency, { symbol: string; label: string; fl
 };
 
 const CurrencyContext = createContext<CurrencyContextValue>({
-  currency: "USD",
+  currency: "NPR",
   setCurrency: () => {},
-  formatPrice: (n) => `$${n.toFixed(2)}`,
-  convertPrice: (n) => n,
-  symbol: "$",
+  formatPrice: (n) =>
+    `रू${Math.round(n * FALLBACK_RATES.NPR).toLocaleString("en-IN")}`,
+  convertPrice: (n) => n * FALLBACK_RATES.NPR,
+  symbol: "रू",
   rates: FALLBACK_RATES,
   ratesLoading: false,
 });
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>("USD");
+  const [currency, setCurrencyState] = useState<Currency>("NPR");
   const [rates, setRates]           = useState<Record<Currency, number>>(FALLBACK_RATES);
   const [ratesLoading, setRatesLoading] = useState(true);
 

@@ -17,12 +17,15 @@ import {
 import { useTranslations } from "next-intl";
 import { useToast } from "@/contexts/ToastContext";
 import {
+  getKycStatus,
   sellerVideosDelete,
   sellerVideosList,
   sellerVideosUpload,
+  type KycStatusResponse,
   type SellerVideo,
   type SellerVideoStatus,
 } from "@/lib/api";
+import { SellerKycPublishBanner } from "@/components/dashboard/SellerKycPublishBanner";
 import { formatFileSize, timeAgo } from "@/lib/videoFormat";
 import { resolveMediaUrl } from "@/lib/videoMedia";
 
@@ -68,6 +71,8 @@ export function SellerVideoGalleryView() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadName, setUploadName] = useState("");
+  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatusResponse["status"] | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +85,10 @@ export function SellerVideoGalleryView() {
 
   useEffect(() => {
     load();
+    getKycStatus().then((k) => {
+      setKycVerified(k?.kycVerified ?? false);
+      setKycStatus(k?.status ?? "pending");
+    });
   }, [load]);
 
   useEffect(() => {
@@ -130,6 +139,8 @@ export function SellerVideoGalleryView() {
 
   return (
     <div className="w-full space-y-6 pb-8">
+      <SellerKycPublishBanner kycVerified={kycVerified} kycStatus={kycStatus} />
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">{t("galleryTitle")}</h1>
@@ -293,7 +304,15 @@ function VideoCard({
       </div>
       <div className={`p-4 ${compact ? "p-3" : ""} flex-1 min-w-0`}>
         <h3 className="font-semibold text-sm text-[var(--foreground)] line-clamp-2">{video.title}</h3>
-        <p className="text-xs text-neutral-500 mt-1 capitalize">{video.status}</p>
+        <p className="text-xs text-neutral-500 mt-1 capitalize">
+          {video.status === "draft" || video.status === "processing" ? (
+            <span className="inline-flex rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800 not-italic normal-case">
+              Draft · KYC
+            </span>
+          ) : (
+            video.status
+          )}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             href={`/dashboard/videos/editor/${video.id}`}

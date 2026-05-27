@@ -9,6 +9,7 @@ import {
   deleteProduct,
   archiveProduct,
   unarchiveProduct,
+  publishProduct,
   browseProducts,
   getProductById,
 } from "../controllers/productController";
@@ -62,3 +63,4 @@ productsRouter.patch("/:id", (req, res, next) => {
 productsRouter.delete("/:id", deleteProduct);
 productsRouter.patch("/:id/archive", archiveProduct);
 productsRouter.patch("/:id/unarchive", unarchiveProduct);
+productsRouter.patch("/:id/publish", requireSeller, publishProduct);

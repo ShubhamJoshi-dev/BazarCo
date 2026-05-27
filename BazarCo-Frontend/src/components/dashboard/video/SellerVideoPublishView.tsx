@@ -8,9 +8,18 @@ import { Heart, Loader2, MessageCircle, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
-import { productsList, sellerVideosGet, sellerVideosPublish, sellerVideosUpdate, type SellerVideo } from "@/lib/api";
+import {
+  getKycStatus,
+  productsList,
+  sellerVideosGet,
+  sellerVideosPublish,
+  sellerVideosUpdate,
+  type KycStatusResponse,
+  type SellerVideo,
+} from "@/lib/api";
 import type { Product } from "@/types/api";
 import { getBackendBaseUrl } from "@/config/env";
+import { SellerKycPublishBanner } from "@/components/dashboard/SellerKycPublishBanner";
 
 function mediaUrl(url: string) {
   if (!url) return "";
@@ -28,6 +37,8 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [kycVerified, setKycVerified] = useState<boolean | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatusResponse["status"] | null>(null);
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState("public");
   const [category, setCategory] = useState("Fashion & Apparel");
@@ -39,7 +50,13 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [v, p] = await Promise.all([sellerVideosGet(videoId), productsList("active")]);
+    const [v, p, kyc] = await Promise.all([
+      sellerVideosGet(videoId),
+      productsList(),
+      getKycStatus(),
+    ]);
+    setKycVerified(kyc?.kycVerified ?? false);
+    setKycStatus(kyc?.status ?? "pending");
     if (v) {
       setVideo(v);
       setCaption(v.caption);
@@ -81,8 +98,12 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
   }
 
   async function publish() {
+    if (!kycVerified) {
+      toast.error(t("publishRequiresKyc"));
+      return;
+    }
     setSaving(true);
-    const updated = await sellerVideosPublish(videoId, {
+    const { video: updated, message } = await sellerVideosPublish(videoId, {
       caption,
       visibility,
       category,
@@ -94,12 +115,15 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
     if (updated) {
       toast.success(t("published"));
       router.push("/dashboard/videos/performance");
-    } else toast.error(t("saveFailed"));
+    } else {
+      toast.error(message ?? t("publishRequiresKyc"));
+    }
   }
 
   const filteredProducts = products.filter(
     (p) => !productQ || p.name.toLowerCase().includes(productQ.toLowerCase()),
   );
+  const linkableProducts = filteredProducts.filter((p) => p.status === "active");
 
   if (loading) {
     return <div className="h-64 animate-pulse rounded-xl bg-neutral-100" />;
@@ -108,12 +132,19 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
     return <p className="text-neutral-500">{t("notFound")}</p>;
   }
 
+  const isLive = video.status === "live" || video.status === "categorized";
+
   return (
     <div className="w-full space-y-6 pb-10">
+      <SellerKycPublishBanner kycVerified={kycVerified} kycStatus={kycStatus} />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t("publishTitle")}</h1>
           <p className="text-sm text-neutral-500 mt-1">{t("publishSubtitle")}</p>
+          {!isLive && (
+            <p className="mt-2 text-xs font-medium text-amber-700">{t("kycDraftHint")}</p>
+          )}
         </div>
         <div className="flex gap-2 shrink-0">
           <button
@@ -126,9 +157,10 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
           </button>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !kycVerified}
             onClick={publish}
-            className="rounded-lg bg-[var(--brand-red)] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            title={!kycVerified ? t("publishRequiresKyc") : undefined}
+            className="rounded-lg bg-[var(--brand-red)] px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t("publishVideo")}
           </button>
@@ -144,6 +176,11 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
               controls
               playsInline
             />
+            {!isLive && (
+              <div className="absolute left-3 top-3 rounded-full bg-amber-500/95 px-3 py-1 text-[10px] font-bold uppercase text-white shadow">
+                Draft
+              </div>
+            )}
             <div className="absolute right-2 bottom-24 flex flex-col gap-3 text-white text-center text-xs">
               <Heart className="w-6 h-6 mx-auto" />
               <MessageCircle className="w-6 h-6 mx-auto" />
@@ -217,6 +254,7 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
 
           <section className="clay-card p-5 space-y-3">
             <h2 className="font-semibold">{t("linkProducts")}</h2>
+            <p className="text-xs text-neutral-500">{t("linkPublishedProductsOnly")}</p>
             <input
               type="search"
               value={productQ}
@@ -225,25 +263,31 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
               className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             />
             <ul className="space-y-2 max-h-48 overflow-y-auto">
-              {filteredProducts.slice(0, 8).map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggleProduct(p.id)}
-                    className={`w-full flex items-center gap-3 rounded-lg border p-2 text-left transition-colors ${
-                      linkedIds.includes(p.id)
-                        ? "border-[var(--brand-red)] bg-red-50/50"
-                        : "border-neutral-200 hover:bg-neutral-50"
-                    }`}
-                  >
-                    {p.imageUrl && (
-                      <Image src={p.imageUrl} alt="" width={40} height={40} className="rounded object-cover" unoptimized />
-                    )}
-                    <span className="flex-1 text-sm font-medium truncate">{p.name}</span>
-                    <span className="text-sm font-semibold text-[var(--brand-red)]">{formatPrice(p.price)}</span>
-                  </button>
+              {linkableProducts.length === 0 ? (
+                <li className="text-sm text-neutral-500 py-4 text-center">
+                  {kycVerified ? t("noPublishedProducts") : t("publishProductsAfterKyc")}
                 </li>
-              ))}
+              ) : (
+                linkableProducts.slice(0, 8).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleProduct(p.id)}
+                      className={`w-full flex items-center gap-3 rounded-lg border p-2 text-left transition-colors ${
+                        linkedIds.includes(p.id)
+                          ? "border-[var(--brand-red)] bg-red-50/50"
+                          : "border-neutral-200 hover:bg-neutral-50"
+                      }`}
+                    >
+                      {p.imageUrl && (
+                        <Image src={p.imageUrl} alt="" width={40} height={40} className="rounded object-cover" unoptimized />
+                      )}
+                      <span className="flex-1 text-sm font-medium truncate">{p.name}</span>
+                      <span className="text-sm font-semibold text-[var(--brand-red)]">{formatPrice(p.price)}</span>
+                    </button>
+                  </li>
+                ))
+              )}
             </ul>
           </section>
 
@@ -270,7 +314,8 @@ export function SellerVideoPublishView({ videoId }: { videoId: string }) {
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+                disabled={!kycVerified}
+                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
           </section>

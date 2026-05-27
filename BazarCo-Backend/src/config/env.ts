@@ -35,6 +35,14 @@ const REDIS_URI = (process.env.REDIS_URI ?? "").trim();
 const UNSEND_MESSAGE_WINDOW_MINUTES = Number(process.env.UNSEND_MESSAGE_WINDOW_MINUTES) || 15;
 const OPENAI_API_KEY = (process.env.OPENAI_API_KEY ?? "").trim();
 
+const ADMIN_SEED_PASSWORD = (process.env.ADMIN_SEED_PASSWORD ?? "").trim();
+const ADMIN_SHUBHAM_PASSWORD = (process.env.ADMIN_SHUBHAM_PASSWORD ?? ADMIN_SEED_PASSWORD).trim();
+const ADMIN_SITAL_PASSWORD = (process.env.ADMIN_SITAL_PASSWORD ?? ADMIN_SEED_PASSWORD).trim();
+const ADMIN_SANDEEP_PASSWORD = (process.env.ADMIN_SANDEEP_PASSWORD ?? ADMIN_SEED_PASSWORD).trim();
+const ADMIN_MAINTENANCE_SECRET = (process.env.ADMIN_MAINTENANCE_SECRET ?? "").trim();
+const ADMIN_RATE_LIMIT_WINDOW_MS = Number(process.env.ADMIN_RATE_LIMIT_WINDOW_MS) || 60_000;
+const ADMIN_RATE_LIMIT_MAX = Number(process.env.ADMIN_RATE_LIMIT_MAX) || 120;
+
 export const env = {
   NODE_ENV: NODE_ENV as "development" | "production" | "test",
   PORT,
@@ -64,6 +72,13 @@ export const env = {
   REDIS_URI,
   UNSEND_MESSAGE_WINDOW_MINUTES,
   OPENAI_API_KEY,
+  ADMIN_SEED_PASSWORD,
+  ADMIN_SHUBHAM_PASSWORD,
+  ADMIN_SITAL_PASSWORD,
+  ADMIN_SANDEEP_PASSWORD,
+  ADMIN_MAINTENANCE_SECRET,
+  ADMIN_RATE_LIMIT_WINDOW_MS,
+  ADMIN_RATE_LIMIT_MAX,
   isDev: NODE_ENV === "development",
   isProd: NODE_ENV === "production",
 } as const;
