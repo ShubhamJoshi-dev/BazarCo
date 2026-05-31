@@ -29,7 +29,11 @@ import {
   type KycStatusResponse,
 } from "@/lib/api";
 import { SellerKycPublishBanner } from "@/components/dashboard/SellerKycPublishBanner";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import {
+  formatDisplayAmount,
+  storedPriceToDisplay,
+  useCurrency,
+} from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 
 const inputClass =
@@ -86,7 +90,7 @@ export function SellerProductFormPage({
   const router = useRouter();
   const t = useTranslations("sellerProductForm");
   const toast = useToast();
-  const { formatPrice, currency } = useCurrency();
+  const { formatPrice, convertPrice, toUsd, currency } = useCurrency();
 
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
@@ -116,6 +120,7 @@ export function SellerProductFormPage({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const mainImageRef = useRef<HTMLInputElement>(null);
+  const [loadedUsdPrice, setLoadedUsdPrice] = useState<number | null>(null);
 
   const listingPrice = useMemo(() => {
     const sale = parseFloat(salePrice);
@@ -124,6 +129,11 @@ export function SellerProductFormPage({
     if (!Number.isNaN(regular) && regular >= 0) return regular;
     return 0;
   }, [price, salePrice]);
+
+  const listingPriceUsd = useMemo(
+    () => toUsd(listingPrice),
+    [listingPrice, toUsd],
+  );
 
   const loadMeta = useCallback(async () => {
     const [cats, tagList, kyc] = await Promise.all([
@@ -144,6 +154,7 @@ export function SellerProductFormPage({
   useEffect(() => {
     if (mode !== "edit" || !productId) return;
     setLoading(true);
+    setLoadedUsdPrice(null);
     getProductById(productId)
       .then((data) => {
         if (!data?.product) {
@@ -154,7 +165,7 @@ export function SellerProductFormPage({
         const p = data.product;
         setName(p.name);
         setDescription(p.description ?? "");
-        setPrice(String(p.price));
+        setLoadedUsdPrice(Number(p.price));
         setSku(p.sku ?? "");
         setStock(String(p.stock ?? 0));
         setBrand(p.brand ?? "");
@@ -165,6 +176,13 @@ export function SellerProductFormPage({
       })
       .finally(() => setLoading(false));
   }, [mode, productId, router, t, toast]);
+
+  /* Stored USD (or legacy NPR in `price`) → display currency in inputs */
+  useEffect(() => {
+    if (loadedUsdPrice === null || Number.isNaN(loadedUsdPrice)) return;
+    const display = storedPriceToDisplay(loadedUsdPrice, currency, convertPrice);
+    setPrice(formatDisplayAmount(display, currency));
+  }, [loadedUsdPrice, convertPrice, currency]);
 
   const onMainImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,7 +217,7 @@ export function SellerProductFormPage({
 
   const buildPayload = () => {
     const trimmedName = name.trim();
-    const numPrice = listingPrice;
+    const numPrice = listingPriceUsd;
     const numStock = Math.max(0, Math.floor(Number(stock)) || 0);
     return {
       name: trimmedName,
@@ -693,10 +711,12 @@ export function SellerProductFormPage({
                   {name.trim() || t("previewTitleFallback")}
                 </p>
                 <p className="text-lg font-bold text-white mt-1 tabular-nums">
-                  {formatPrice(listingPrice)}
+                  {formatPrice(listingPriceUsd)}
                 </p>
                 {salePrice && parseFloat(salePrice) > 0 && parseFloat(price) > parseFloat(salePrice) && (
-                  <p className="text-xs text-neutral-400 line-through">{formatPrice(parseFloat(price))}</p>
+                  <p className="text-xs text-neutral-400 line-through">
+                    {formatPrice(toUsd(parseFloat(price)))}
+                  </p>
                 )}
               </div>
             </div>
