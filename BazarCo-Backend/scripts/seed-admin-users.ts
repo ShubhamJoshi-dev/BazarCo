@@ -13,7 +13,7 @@ const SUPER_ADMINS = [
   {
     username: "shubham",
     name: "Shubham",
-    email: "shubham@bazarco.admin",
+    email: "subham@bazarco.admin",
     passwordEnv: () => env.ADMIN_SHUBHAM_PASSWORD,
   },
   {

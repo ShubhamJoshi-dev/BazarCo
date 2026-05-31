@@ -13,6 +13,11 @@ import {
   tagCreate,
   tagsList,
 } from "@/lib/api";
+import {
+  formatDisplayAmount,
+  storedPriceToDisplay,
+  useCurrency,
+} from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 
 export function ProductFormModal({
@@ -35,9 +40,10 @@ export function ProductFormModal({
   setError: (v: string | null) => void;
 }) {
   const toast = useToast();
+  const { convertPrice, toUsd, currency } = useCurrency();
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [price, setPrice] = useState(product?.price ?? 0);
+  const [price, setPrice] = useState("");
   const [sku, setSku] = useState(product?.sku ?? "");
   const [stock, setStock] = useState(product?.stock ?? 50);
   const [brand, setBrand] = useState(product?.brand ?? "");
@@ -53,7 +59,13 @@ export function ProductFormModal({
   useEffect(() => {
     setName(product?.name ?? "");
     setDescription(product?.description ?? "");
-    setPrice(product?.price ?? 0);
+    const stored = product?.price;
+    if (stored != null && !Number.isNaN(Number(stored))) {
+      const display = storedPriceToDisplay(Number(stored), currency, convertPrice);
+      setPrice(formatDisplayAmount(display, currency));
+    } else {
+      setPrice("");
+    }
     setSku(product?.sku ?? "");
     setStock(product?.stock ?? 50);
     setBrand(product?.brand ?? "");
@@ -61,7 +73,7 @@ export function ProductFormModal({
     setTagIds(product?.tagIds ?? []);
     setImagePreview(product?.imageUrl ?? null);
     setImageFile(null);
-  }, [product]);
+  }, [product, convertPrice, currency]);
 
   useEffect(() => {
     categoriesList().then(setCategories);
@@ -124,7 +136,7 @@ export function ProductFormModal({
     const payload = {
       name: trimmedName,
       description: description.trim() || undefined,
-      price: numPrice,
+      price: toUsd(numPrice),
       sku: sku.trim() || undefined,
       stock: numStock,
       brand: brand.trim() || undefined,
