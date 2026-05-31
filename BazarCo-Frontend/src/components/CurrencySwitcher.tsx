@@ -95,7 +95,11 @@ export function CurrencySwitcher({
                   <div className="flex-1 text-left">
                     <p className="font-bold text-sm">{c}</p>
                     <p className="text-[10px] text-[var(--brand-muted)]">
-                      {c === "USD" ? "Base currency" : `1 USD = ${c === "NPR" ? Math.round(rate) : rate.toFixed(2)} ${c}`}
+                      {c === "NPR"
+                        ? "List prices in Nepali Rupees"
+                        : c === "USD"
+                          ? `रू\u00A0${Math.round(rates.NPR)} per $1`
+                          : `1 USD ≈ ${rate.toFixed(2)} AUD`}
                     </p>
                   </div>
                   {selected && (

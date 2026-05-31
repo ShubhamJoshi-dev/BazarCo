@@ -86,7 +86,8 @@ export function SellerProductFormPage({
   const router = useRouter();
   const t = useTranslations("sellerProductForm");
   const toast = useToast();
-  const { formatPrice, currency } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const currency = "NPR";
 
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
